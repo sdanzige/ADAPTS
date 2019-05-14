@@ -1,0 +1,765 @@
+#' Build clusters based on n-pass spillover matrix
+#'
+#' cellCounts <- heirarchicalClassify(sigMatrix, geneExpr, toPred, heirarchData=NULL)
+#'
+#' UNDER DEVELOPMENT: USE AT YOUR OWN RISK
+#'
+#' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
+#' @param geneExpr  The source gene expression matrix used to calculate refExpr
+#' @param toPred  The gene expression to ultimately deconvolve
+#' @param heirarchData  The results of heirarchicalSplit OR heirarchicalSplit.sc (DEFAULT: NULL, ie heirarchicalSplit)
+#' @export
+#' @return a mtrix of cell counts
+heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL) {
+  if(is.null(heirarchData)) {
+    heirarchData <- heirarchicalSplit(sigMatrix, geneExpr)
+  }
+
+  #Step 1: Baseline deconvolution
+  toPred.sub <- toPred[rownames(toPred) %in% rownames(sigMatrix),,drop=FALSE]
+  colnames(toPred.sub) <- make.names(colnames(toPred.sub), unique=TRUE)
+  toPred.sub.imp <- missForest.par(toPred.sub)
+  initDecon <- estCellPercent.DCQ(refExpr = sigMatrix, geneExpr=toPred.sub.imp)
+
+  #Step 2: Build the clustered Deconvolution
+  clusters <- NULL
+  for (i in 1:length(heirarchData$allClusters)) {
+    clusters <- rbind(data.frame(cell=heirarchData$allClusters[[i]], clust=i), clusters)
+  }
+  clustIDs <- clusters$clust
+  names(clustIDs) <- clusters$cell
+  clustIDs <- clustIDs[rownames(initDecon)]
+  initDecon.clust <- apply(initDecon, 2, function(x){tapply(x,clustIDs, sum)})
+
+  #Step 3: Split the clusters based on the smaller groups
+  curDecon.break.list <- list()
+  for (i in as.numeric(rownames(initDecon.clust))) {
+    curCellTypes <- heirarchData$allClusters[[i]]
+    if(length(curCellTypes) > 1) {
+      #curSigMat <- heirarchData$sigMatList[[i]][,curCellTypes,drop=FALSE]
+      curSigMat <- heirarchData$sigMatList[[i]][,,drop=FALSE]
+      toPred.sub <- toPred[rownames(toPred) %in% rownames(curSigMat),,drop=FALSE]
+      colnames(toPred.sub) <- make.names(colnames(toPred.sub), unique=TRUE)
+      toPred.sub.imp <- missForest.par(toPred.sub)
+
+      curDecon <- estCellPercent.DCQ(refExpr = curSigMat, geneExpr=toPred.sub.imp)
+      curDecon <- curDecon[curCellTypes,,drop=FALSE]
+      curDecon.frac <- apply(curDecon, 2, function(x){x/sum(x)})
+      curDecon.frac <- curDecon.frac[rownames(curDecon.frac) != 'others',,drop=FALSE]
+      nas <- apply(curDecon.frac, 2, function(x){ any(is.na(x)) })
+      curDecon.frac[,nas] <- rep(1/nrow(curDecon.frac), nrow(curDecon.frac))
+
+      curDecon.break <- initDecon.clust[as.character(i),] * curDecon.frac#initDecon.clust[as.character(i),,drop=FALSE] * curDecon.frac
+    } else {
+      curDecon.break <- initDecon.clust[as.character(i),,drop=FALSE]
+      rownames(curDecon.break) <- curCellTypes
+    } #if(length(curCellTypes) > 1) {
+    curDecon.break.list[[as.character(i)]] <- curDecon.break
+  } #for (i in as.numeric(rownames(initDecon.clust))) {
+
+  curDecon.new <- do.call(rbind, curDecon.break.list)
+  curDecon.new <- rbind(curDecon.new, initDecon['others',,drop=FALSE])
+  curDecon.new.rescale <- apply(curDecon.new, 2, function(x){100*x/sum(x)})
+
+  outFile <- paste('heirarchicalSplit', Sys.Date(),'pdf', sep='.')
+  grDevices::pdf(outFile)
+  res <- try(pheatmap::pheatmap(t(curDecon.new.rescale), fontsize=6, fontsize_row = 4, cluster_cols=FALSE, cluster_rows = TRUE), silent=TRUE)
+  if(inherits(res, 'try-error')) { try(pheatmap::pheatmap(t(curDecon.new.rescale), fontsize=6, fontsize_row = 4, cluster_cols=FALSE, cluster_rows = FALSE), silent=TRUE) }
+  grDevices::dev.off()
+
+  return(curDecon.new.rescale)
+}
+
+#' Attempt to deconvolve cell types by building a heriarchy of cell types using
+#'   spillToConvergence to determine cell types that are not signficantly different.
+#'   First deconvolve those clusters of cell types.
+#'   Deconvolution matrices are then built to separate the cell types that formerly could
+#'   not be separated.
+#'
+#'   heirarchData <- heirarchicalSplit(sigMatrix, geneExpr)
+#'
+#'   UNDER DEVELOPMENT: USE AT YOUR OWN RISK
+#'
+#'   heirarchData <- heirarchicalSplit(sigMatrix, geneExpr)
+#'
+#' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
+#' @param geneExpr  The source gene expression matrix used to calculate sigMatrix
+#' @export
+#' @return A list of clusters and a list of signature matrices for breaking those clusters
+heirarchicalSplit <- function(sigMatrix, geneExpr) {
+  allClusters <- clustWspillOver(sigMatrix, geneExpr)
+
+  #Step 1: Do the level 1 deconvolution
+  #firstLevelDecon <- estCellPercent.DCQ(refExp=sigMatrix, geneExpr = geneExpr)
+
+  #Make new signature matrices for each split.  How to determine # of genes for only 2 cell types?
+  sigMatList <- list()
+  for (i in 1:length(allClusters)) {
+    curLen <- length(allClusters[[i]])
+    if (curLen == 1) {
+      sigMatList[[i]] <- as.matrix(sigMatrix)
+      next;
+    }
+
+    #if(curLen == 2) {
+
+    #}  #I'm still nto sure about this one
+
+    curGeneExpr <-geneExpr[,colnames(geneExpr) %in% allClusters[[i]]]
+    naBool <- apply(curGeneExpr, 1, function(x){ any(is.na(x)) })
+    if(any(naBool))  {
+      message(paste('Removing', sum(naBool), 'genes due to NAs'))
+      curGeneExpr <- curGeneExpr[!naBool,]
+      #Note:  Why is it imputing later if I've removed all of these??? I need to fix the NA problem better.
+    }
+
+    colnames(curGeneExpr) <- sub('\\.[0-9]+$', '', colnames(curGeneExpr))
+    gList <- rankByT(geneExpr = curGeneExpr, qCut=0.3)
+    if(length(gList) == 1) {
+      otherCellType <- allClusters[[i]][!allClusters[[i]] %in% names(gList)]
+      gList[[otherCellType]] <- gList[[1]]
+    }
+    origMatrix <- sigMatrix[,allClusters[[i]]]
+    #Top 100 by variance?
+    origMatrix.sm <- origMatrix[names(utils::tail(sort(apply(origMatrix,1,stats::var)),ceiling(nrow(sigMatrix)/10))),]
+    #I will need to make AugmentSigMatrix more robust
+    newMatData <- try(AugmentSigMatrix(origMatrix=origMatrix.sm, fullData=curGeneExpr, newData=curGeneExpr, gList=gList,
+                                   nGenes=1:100, plotToPDF=TRUE, imputeMissing=TRUE, condTol=1.01, postNorm=FALSE,
+                                   minSumToRem=NA, addTitle=paste(allClusters[[i]],collapse='_'), autoDetectMin=TRUE,
+                                   calcSpillOver=FALSE), silent = TRUE)
+    if(inherits(newMatData, 'try-error')) {
+      sigMatList[[i]] <- as.matrix(origMatrix.sm)
+    } else {
+      #Revision 08-20-18 -  Add in all of cell types, but with just genes in newMatData
+
+      sigMatList[[i]] <- newMatData
+    }
+  } #for (i in 1:length(allClusters)) {
+
+  return(list(allClusters=allClusters, sigMatList=sigMatList))
+}
+
+#' Build clusters based on n-pass spillover matrix
+#'
+#' allClusters <- clustWspillOver(sigMatrix, geneExpr)
+#'
+#' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
+#' @param geneExpr  The source gene expression matrix used to calculate sigMatrix.
+#' @export
+#' @return  Cell types grouped by cluster
+clustWspillOver <- function(sigMatrix, geneExpr) {
+  curGeneExpr <- geneExpr
+  naBool <- apply(curGeneExpr, 1, function(x){ any(is.na(x)) })
+  if(any(naBool))  {
+    message(paste('clustWspillOver: Removing', sum(naBool), 'genes due to NAs'))
+    curGeneExpr <- curGeneExpr[!naBool,,drop=FALSE]
+
+    keepBool <- rownames(sigMatrix) %in% rownames(geneExpr)
+    message(paste('clustWspillOver: Trimming', sum(!keepBool), '/', length(keepBool), 'genes from sigMatrix due to missingness'))
+    sigMatrix <- sigMatrix[keepBool,,drop=FALSE]
+    #Note:  Why is it imputing later if I've removed all of these??? I need to fix the NA problem better.
+  }
+
+  deconMatrices <- spillToConvergence(sigMatrix=sigMatrix, geneExpr=curGeneExpr)
+  curExpr <- estCellCounts.nPass(geneExpr=sigMatrix, deconMatrices=deconMatrices)
+
+  #Any two identical columns belong in a cluster.
+  curCor <- stats::cor(curExpr)
+  allClusters <- list()
+  while(nrow(curCor) > 0) {
+    curLabel <- rownames(curCor)[1]
+    clustIdx <- (round(curCor[,curLabel],2) - 1) == 0
+    curRows <- rownames(curCor)[clustIdx]
+    allClusters[[length(allClusters)+1]] <- curRows
+    curCor <- curCor[!clustIdx,,drop=FALSE]
+  } #while(ncol(curCor) > 1) {
+
+  return(allClusters)
+}
+
+#' Deconvolve with an n-pass spillover matrix
+#'
+#' curExpr <- estCellCounts.nPass(sigMatrix, deconMatrices)
+#'
+#' @param geneExpr  The gene expression matrix
+#' @param deconMatrices  The results from spillToConvergence()
+#' @export
+#' @return An estimate of cell counts
+estCellCounts.nPass <- function(geneExpr, deconMatrices) {
+  curExpr <- geneExpr
+  for (curDecon in deconMatrices) {
+    curExpr <- estCellPercent.DCQ(refExpr = curDecon, geneExpr = curExpr)
+  }
+  return(curExpr)
+}
+
+#' Build an n-pass spillover matrix, continuing until the results converge into clusters of cell types
+#'
+#' deconMatrices <- spillToConvergence(sigMatrix, geneExpr, 100, FALSE, TRUE)
+#'
+#' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
+#' @param geneExpr  The source gene expression matrix used to calculate sigMatrix
+#' @param nPasses  The maximum number of iterations (DEFAULT: 100)
+#' @param plotIt  Set to TRUE to plot it (DEFAULT: FALSE)
+#' @param imputNAs  Set to TRUE to imput genes with missing values & cache the imputed.  FALSE will just remove them (DEFAULT: FALSE)
+#' @export
+#' @return  A list of signature matrices
+spillToConvergence <- function(sigMatrix, geneExpr, nPasses=100, plotIt=FALSE, imputNAs=FALSE) {
+  keepBool <- sub('\\.[0-9]+$', '', colnames(geneExpr)) %in% colnames(sigMatrix)
+  if (!all(keepBool)) {
+    message(paste('Removing', sum(!keepBool), '/', length(keepBool), 'from geneExpr that are not in sigMatrix'))
+    geneExpr <- geneExpr[,keepBool,drop=FALSE]
+  }
+
+  missingGeneBool <- !rownames(sigMatrix) %in% rownames(geneExpr)
+  if (sum(missingGeneBool) > 0) {
+    message(paste('Removing', sum(missingGeneBool), 'that are in sigMatrix but not geneExpr'))
+    sigMatrix <- sigMatrix[!missingGeneBool,]
+  }
+
+  geneExpr.sub <- geneExpr[rownames(sigMatrix),]
+  naGeneBool <- apply(geneExpr.sub, 1, function(x) {any(is.na(x))})
+  if(any(naGeneBool)) {
+    if (imputNAs==TRUE) {
+      message(paste('Imputing for', sum(naGeneBool), '/', length(naGeneBool), 'genes with missing values'))
+      saveFile <- paste('spillToConvergence.geneExpr.sub.imp',nrow(sigMatrix),ncol(sigMatrix),nrow(geneExpr),ncol(geneExpr),sum(naGeneBool),length(naGeneBool),'RData',sep='.')
+      newMatrix <- NULL
+      if(file.exists(saveFile)) {
+        message(paste('Loading pre-imputed', saveFile))
+        newMatrix <- get(load(saveFile)[1])
+        if(any(rownames(newMatrix) != rownames(geneExpr.sub)) | any(colnames(newMatrix) != colnames(geneExpr.sub))) {
+          message(paste('Loaded matrix does not match genes/experiments in input matrix.'))
+          newMatrix <- NULL
+        }
+      } #if(file.exists(saveFile)) {
+
+      if(is.null(newMatrix)) {
+        message('Imputing')
+        newMatrix <- missForest.par(dataMat = geneExpr.sub, parallelize = "variables")
+        save(newMatrix, file=saveFile)
+      }
+      geneExpr.sub <- newMatrix
+    } else {
+      message(paste('Removing', sum(naGeneBool), '/', length(naGeneBool), 'genes with missing values'))
+      keepGenes <- names(naGeneBool)[!naGeneBool]
+      geneExpr.sub <- geneExpr.sub[keepGenes,]
+      sigMatrix <- sigMatrix[keepGenes,]
+    } #if (imputNAs==TRUE) {
+  }
+
+  cellEst <- estCellPercent.DCQ(refExpr=sigMatrix,  geneExpr=geneExpr.sub)
+  if(is.null(cellEst)) {message('spillToConvergence deconvolution failed'); return(NULL)}
+  newSig <- t(apply(cellEst, 1, function(x) { tapply(x, sub('\\.[0-9]+$', '', colnames(cellEst)), mean, na.rm=TRUE)}))
+  #estToPlot <- newSig[c(sort(colnames(newSig)),'others'),sort(colnames(newSig))]
+  if(plotIt==TRUE) {pheatmap::pheatmap(t(cellEst), main='First Decon Results\n y=Purified, x=Decon As', fontsize = 4)}#, cluster_rows = FALSE, cluster_cols = FALSE)
+  cellEst.last <- cellEst
+  cellEst.last2 <- cellEst
+
+  addPassList <- list()
+  addPassList[[1]] <- sigMatrix
+  addPassList[[2]] <- newSig
+  for (curPass in 3:nPasses) {
+    cellEst.next <- estCellPercent.DCQ(refExpr=addPassList[[curPass-1]],  geneExpr=cellEst.last)
+    newSig.next <- t(apply(cellEst.next, 1, function(x) { tapply(x, sub('\\.[0-9]+$', '', colnames(cellEst.next)), mean, na.rm=TRUE)}))
+    rnames <- c(sort(rownames(cellEst.next)[rownames(cellEst.next) %in% colnames(cellEst.next)]), sort(rownames(cellEst.next)[!rownames(cellEst.next) %in% colnames(cellEst.next)]))
+    cnames <- c(sort(colnames(cellEst.next)[colnames(cellEst.next) %in% rownames(cellEst.next)]), sort(colnames(cellEst.next)[!colnames(cellEst.next) %in% rownames(cellEst.next)]))
+    cellEst.next <- cellEst.next[rnames,cnames]
+
+    pairedTypes <- sort(rownames(cellEst.next)[rownames(cellEst.next) %in% colnames(cellEst.next)])
+    estWself3 <- sapply(pairedTypes, function(i) {cellEst.next[i,i]})
+    if(plotIt==TRUE) {graphics::barplot(estWself3, col=grDevices::rainbow(length(estWself3)), main=paste('Self Identification in Purified Samples\nPass',curPass), ylim=c(0,100), cex.names=0.66, las=2)}
+
+    titleStr3 <- paste0(curPass, 'x-Re-Deconvolving results with spillover matrix\nMean Self % = ', round(mean(estWself3)))
+    if(plotIt==TRUE) {pheatmap::pheatmap(t(newSig.next),cluster_rows = FALSE, cluster_cols = FALSE, main=titleStr3, xlab='DCQ', ylab='Reference', fontsize = 4)} #xlab and ylab don't work
+
+    #addPassList[[curPass]] <- list(res=res3, cellEst=cellEst.third, estWself=estWself3, titleStr=titleStr3)
+    addPassList[[curPass]] <- newSig.next
+
+    #Test to see if there was any change from the last pass.  If not, then stop
+    diffs <- sapply(colnames(cellEst.next), function(x){ sqrt(mean((cellEst.last[,x]-cellEst.next[,x])^2))})
+    if(all(diffs == 0)) { break;}
+
+    #Test to see if the signature matrices are oscilating
+    diffs <- sapply(colnames(cellEst.next), function(x){ sqrt(mean((cellEst.last2[,x]-cellEst.next[,x])^2))})
+    if(all(diffs == 0)) { break;}
+
+    cellEst.last2 <- cellEst.last
+    cellEst.last <- cellEst.next
+  } #for (curPass in 3:nPasses) {
+
+  if(plotIt==TRUE) {pheatmap::pheatmap(t(newSig.next),cluster_rows = TRUE, cluster_cols = TRUE, main=titleStr3, xlab='DCQ', ylab='Reference', fontsize = 4)} #xlab and ylab don't work
+
+  return(addPassList)
+}
+
+#' Build a spillover matrix, i.e. what do purified samples deconvolve as?
+#'
+#' spillExpr <- buildSpilloverMat(refExpr, geneExpr, method='DCQ')
+#'
+#' @param refExpr  The deconvolution matrix, e.g. LM22 or MGSM27
+#' @param geneExpr  The full gene expression for purified cell types.  Multiple columns (examples) for each column in the reference expr.
+#' @param method  One of 'DCQ', 'SVMDECON', 'DeconRNASeq' (DEFAULT: DCQ)
+#' @export
+#' @return A spillover matrix showing how purified cell types deconvolve
+buildSpilloverMat <- function(refExpr, geneExpr, method='DCQ') {
+  if(any(grepl('\\.[0-9]+$', unique(colnames(geneExpr))))) {
+    print('###Note: Some of the column names in geneExpr end in a . followed by numbers###')
+    print('Different samples with the same cell types should have exactly the same column names')
+    print('')
+  }
+
+  olGenes <- rownames(refExpr)[rownames(refExpr) %in% rownames(geneExpr)]
+  refExpr <- refExpr[olGenes,]
+  failedGene1 <- apply(refExpr, 1, function(x){any(is.na(x))})
+  geneExpr <- geneExpr[olGenes,]
+  failedGene2 <- apply(geneExpr, 1, function(x){any(is.na(x))})
+  keepGenes <- !failedGene1 & !failedGene2
+
+  if(method == 'DCQ') {
+    cellEst <- estCellPercent.DCQ(refExpr=refExpr[keepGenes,],  geneExpr=geneExpr[keepGenes,])
+  } else if (method == 'SVMDECON') {
+    cellEst <- estCellPercent.svmdecon(refExpr[keepGenes,],  geneExpr[keepGenes,])
+  } else if (method == 'DeconRNASeq')  {
+    cellEst <- estCellPercent.DeconRNASeq(refExpr[keepGenes,],  geneExpr[keepGenes,], marker_set=NULL)
+  } else if (method == 'proportionsInAdmixture') {
+    cellEst <- estCellPercent.proportionsInAdmixture(refExpr[keepGenes,],  geneExpr[keepGenes,], marker_set=NULL)
+  }
+
+  res <- res.bk <- apply(cellEst, 1, function(x) { tapply(x, colnames(cellEst), mean, na.rm=TRUE)})
+  res <- res[,colnames(res)!='others']
+  res <- res[order(toupper(rownames(res))),order(toupper(colnames(res)))]
+  res <- cbind(res, data.frame(others = res.bk[,'others']))
+
+  return(res)
+}
+
+#' Use a spillover matrix to deconvolve a samples
+#'
+#' cellEst <- estCellPercent.spillOver(spillExpr, refExpr,  geneExpr, method='DCQ')
+#'
+#' @param spillExpr  A spill over matrix, as calculated by buildSpilloverMat(). (e.g. LM22.spillover.csv.gz)
+#' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
+#' @param geneExpr  a data frame representing RNA-seq or microarray gene-expression profiles of a given complex tissue. Each row represents an expression of a gene, and each column represents a different experimental sample. colnames contain the name of each sample and rownames includes the genes' symbol. The name of each individual sample and the symbol of each gene should be unique. Any gene with missing expression values should be excluded.
+#' @param method  One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture' (DEFAULT: DCQ)
+#' @param ...  Parameters for estCellPercent.X (e.g. number_of_repeats for .DCQ)
+#' @export
+#' @return  a matrix of estimate cell type percentages in samples
+estCellPercent.spillOver <- function(spillExpr, refExpr,  geneExpr, method='DCQ', ...) {
+  if(method == 'DCQ') {
+    estCellPercent.X <- estCellPercent.DCQ
+  } else if (method == 'SVMDECON') {
+    estCellPercent.X <- estCellPercent.svmdecon
+  } else if (method == 'DeconRNASeq')  {
+    estCellPercent.X <- estCellPercent.DeconRNASeq
+  } else if (method == 'proportionsInAdmixture') {
+    estCellPercent.X <- estCellPercent.proportionsInAdmixture
+  }
+
+  cellEst <- estCellPercent.X(refExpr=refExpr,  geneExpr=geneExpr, ...)
+  cellEst2 <- estCellPercent.X(refExpr=t(spillExpr),  geneExpr=cellEst, ...)
+
+  return(cellEst2)
+}
+
+#' Use DCQ to estimate the cell count percentage
+#' Requires installation of package 'ComICS'
+#'   To Do: Also report the standard deviation as a confidence metric
+#'
+#'   cellEst <- estCellPercent.DCQ(refExpr,  geneExpr, marker_set, number_of_repeats=10, alpha=0.05, lambda=0.2)
+#'
+#' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
+#' @param geneExpr  a data frame representing RNA-seq or microarray gene-expression profiles of a given complex tissue. Each row represents an expression of a gene, and each column represents a different experimental sample. colnames contain the name of each sample and rownames includes the genes' symbol. The name of each individual sample and the symbol of each gene should be unique. Any gene with missing expression values should be excluded.
+#' @param marker_set  data frames of one column, that includes a preselected list of genes that likely discriminate well between the immune-cell types given in the reference data. (DEFAULT: NULL, i.e. one for each gene in the refExpr)
+#' @param number_of_repeats  using one repeat will generate only one output model. Using many repeats, DCQ calculates a collection of models, and outputs the average and standard deviation for each predicted relative cell quantity. (DEFAULT: 1)
+#' @param alpha  The elasticnet mixing parameter, with 0 <= alpha <= 1. alpha=1 is the lasso penalty, and alpha=0 the ridge penalty. (DEFAULT: 0.05)
+#' @param lambda A minimum value for the elastic net lambda parameter (DEFAULT: 0.2)
+#' @export
+#' @return A matrix with cell type estimates for each samples
+estCellPercent.DCQ <- function(refExpr,  geneExpr, marker_set=NULL, number_of_repeats=10, alpha=0.05, lambda=0.2) {
+
+  if(any(is.na(geneExpr))) {
+    message('There are some NAs in geneExpr, please impute or remove NAs')
+    return(NULL)
+  }
+
+  if(is.null(marker_set)) {marker_set <- data.frame(marker_set=rownames(refExpr))}
+  if(ncol(geneExpr)==1) {geneExpr <- cbind(geneExpr, geneExpr); fixOneCol<-TRUE} else {fixOneCol<-FALSE}
+  suppressWarnings(sink(""))
+  cellCounts <- try(ComICS::dcq(reference_data = refExpr, mix_data = geneExpr, marker_set = marker_set, number_of_repeats=number_of_repeats,lambda_min = lambda,alpha_used = alpha))
+  sink()
+  if(inherits(cellCounts, 'try-error')) {return(cellCounts)}
+  #DCQ returns a list with two matrices: average quantities for each cell type, stdev over all repeats for each cell type
+  #Question for MM-010 data, how many cells?? Frank says 1-10 million
+  cellCoefVar <- cellCoefVar.m <- t(cellCounts$stdev / cellCounts$average)
+  cellCountsPercent <- cellCountsPercent.m <- t(cellCounts$average*100)
+
+  cellCountsPercent.m[cellCountsPercent.m > 0] <- 0
+  cellCoefVar.m[cellCoefVar.m > 0] <- 0
+  others <- abs(colSums(cellCountsPercent.m))
+  others.m <- abs(colMeans(cellCoefVar.m, na.rm=TRUE))
+
+  cellCountsPercent[cellCountsPercent < 0] <- 0
+  cellCountsPercent <- rbind(cellCountsPercent, others)
+  cellCountsPercent <- round(apply(cellCountsPercent, 2, function(x){100*x/sum(x)}),2)
+
+  cellCoefVar <- rbind(cellCoefVar, others.m)
+  cellCoefVar[is.na(cellCoefVar)] <- 0
+  cellCountsPercent.std <- cellCoefVar * cellCountsPercent
+
+  #Note: cellCountsPercent.std is very small.  This DCQ error is not good enough for the estimate
+  if(fixOneCol==TRUE) {
+    cellCountsPercent <- cellCountsPercent[,1,drop=FALSE]
+  }
+
+  return (cellCountsPercent)
+}
+
+#' Use SVMDECON to estimate the cell count percentage
+#' Performs considerably worse in deconvolution than DCQ
+#'
+#' cellEst <- estCellPercent.svmdecon(refExpr,  geneExpr)
+#'
+#' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
+#' @param geneExpr  a data frame representing RNA-seq or microarray gene-expression profiles of a given complex tissue. Each row represents an expression of a gene, and each column represents a different experimental sample. colnames contain the name of each sample and rownames includes the genes' symbol. The name of each individual sample and the symbol of each gene should be unique. Any gene with missing expression values should be excluded.
+#' @param marker_set  data frames of one column, that includes a preselected list of genes that likely discriminate well between the immune-cell types given in the reference data. (DEFAULT: NULL, i.e. one for each gene in the refExpr)
+#' @param useOldVersion  Set the TRUE to 2^ the data (DEFAULT: FALSE)
+#' @param progressBar  Set to TRUE to show a progress bar  (DEFAULT: TRUE)
+#' @export
+#' @return A matrix with cell type estimates for each samples
+estCellPercent.svmdecon <- function(refExpr,  geneExpr, marker_set=NULL, useOldVersion=F,progressBar = T) {
+  if(is.null(marker_set)) {marker_set <- data.frame(marker_set=rownames(refExpr))}
+  if(ncol(geneExpr)==1) {geneExpr <- cbind(geneExpr, geneExpr)}
+
+  refExprMatrix <- as.matrix(refExpr)
+
+  refGenes <- rownames(refExprMatrix)[rownames(refExprMatrix) %in% rownames(geneExpr)]
+  refExprMatrix <- refExprMatrix[refGenes,]
+  geneExpr <- geneExpr[refGenes,]
+
+  if(useOldVersion == F){
+    geneExpr <- 2^geneExpr
+    refExprMatrix <- 2^refExprMatrix
+  }
+
+  proportions <- matrix(nrow=ncol(refExprMatrix), ncol=ncol(geneExpr))
+  for (column in 1:ncol(geneExpr)) {
+    # SVMDECON returns the estimated proportions of each cell-type in the given sample
+    dataCol <- as.matrix(geneExpr[,column])
+    proportions[, column] <- t(SVMDECON(dataCol, refExprMatrix))
+  }
+
+  others <- numeric(ncol(proportions))
+  proportions <- rbind(proportions, others)
+
+  colnames(proportions) <- colnames(geneExpr)
+  rownames(proportions) <- c(colnames(refExprMatrix), "others")
+
+  cellCountsPercent <- round(proportions * 100, 2)
+  return(cellCountsPercent)
+}
+
+#' Use DeconRNASeq to estimate the cell count percentage
+#' Performs with similar effectiveness as DCQ, but identifies different proportions of cell-types
+#' Requires installation of package 'DeconRNASeq':
+#'    source("https://bioconductor.org/biocLite.R")
+#'    biocLite("DeconRNASeq")
+#'
+#'    <joseph.szustakowski@novartis.com> TGJDS (2013). DeconRNASeq: Deconvolution of Heterogeneous Tissue Samples for mRNA-Seq data. R package version 1.18.0.
+#'
+#' cellEst <- estCellPercent.DeconRNASeq(refExpr,  geneExpr, marker_set=NULL)
+#'
+#' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
+#' @param geneExpr  a data frame representing RNA-seq or microarray gene-expression profiles of a given complex tissue. Each row represents an expression of a gene, and each column represents a different experimental sample. colnames contain the name of each sample and rownames includes the genes' symbol. The name of each individual sample and the symbol of each gene should be unique. Any gene with missing expression values should be excluded.
+#' @param marker_set  data frames of one column, that includes a preselected list of genes that likely discriminate well between the immune-cell types given in the reference data. (DEFAULT: NULL, i.e. one for each gene in the refExpr)
+#' @export
+#' @return A matrix with cell type estimates for each samples
+estCellPercent.DeconRNASeq <- function(refExpr,  geneExpr, marker_set=NULL) {
+  if(!'DeconRNASeq' %in% rownames(utils::installed.packages())) {
+    message('DeconRNASeq is required for this function, but not installed.')
+    message('It is available from bioconductor: https://bioconductor.org/packages/release/bioc/html/DeconRNASeq.html')
+    return(NULL)
+  }
+  if(is.null(marker_set)) {marker_set <- data.frame(marker_set=rownames(refExpr))}
+  if(ncol(geneExpr)==1) {geneExpr <- cbind(geneExpr, geneExpr)}
+
+  pca <- pcaMethods::pca  #Something has clobbered PCA
+  # clobbered again
+  cellProportions <- t(DeconRNASeq::DeconRNASeq(datasets=as.data.frame(geneExpr), signatures=refExpr)$out.all)
+
+  cellCountsPercent <- round(cellProportions * 100, 2)
+  others <- numeric(ncol(cellCountsPercent))
+  cellCountsPercent <- rbind(cellCountsPercent, others)
+  colnames(cellCountsPercent) <- colnames(geneExpr)
+  rownames(cellCountsPercent) <- c(colnames(refExpr), "others")
+
+  return (cellCountsPercent)
+}
+
+#' Use R function proportionsInAdmixture to estimate the cell count percentage
+#' Uses the 'WGCNA' package
+#'
+#' cellEst <- estCellPercent.proportionsInAdmixture(refExpr)
+#'
+#' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
+#' @param geneExpr  a data frame representing RNA-seq or microarray gene-expression profiles of a given complex tissue. Each row represents an expression of a gene, and each column represents a different experimental sample. colnames contain the name of each sample and rownames includes the genes' symbol. The name of each individual sample and the symbol of each gene should be unique. Any gene with missing expression values should be excluded.
+#' @param marker_set  data frames of one column, that includes a preselected list of genes that likely discriminate well between the immune-cell types given in the reference data. (DEFAULT: NULL, i.e. one for each gene in the refExpr)
+#' @export
+#' @return A matrix with cell type estimates for each samples
+estCellPercent.proportionsInAdmixture <- function(refExpr,  geneExpr, marker_set=NULL) {
+  if(is.null(marker_set)) {marker_set <- data.frame(marker_set=rownames(refExpr))}
+  if(ncol(geneExpr)==1) {geneExpr <- cbind(geneExpr, geneExpr)}
+
+  # Filter the gene expression matrix and reference expression matrix to only having the same genes
+  refExprMatrix <- as.matrix(refExpr)
+  refGenes <- rownames(refExprMatrix)[rownames(refExprMatrix) %in% rownames(geneExpr)]
+  refExprMatrix <- refExprMatrix[refGenes,]
+  geneExprMatrix <- geneExpr[refGenes,]
+
+  # Changing the input matrices into relevant formats (data frames of corresponding sizes)
+  refExprDF <- as.data.frame(refExprMatrix)
+  refExprDF <- cbind(rownames(refExprDF), refExprDF)
+  geneExprDF <- as.data.frame(t(geneExprMatrix))
+
+  # function proportionsInAdmixture takes in a data frame whose first column reports the gene names and remaining columns report
+  # the gene expression in specific cell types, and a data frame whose rows represent each sample and columns represent the gene expression.
+  # proportionInAdmixture returns a list where rows are samples and columns are cell types
+  proportionList <- WGCNA::proportionsInAdmixture(MarkerMeansPure = refExprDF, datE.Admixture = geneExprDF)["PredictedProportions"]
+  proportionMatrix <- t(matrix(unlist(proportionList), ncol = ncol(refExprMatrix), byrow = FALSE))
+
+  cellCountsPercent <- round(proportionMatrix * 100, 2)
+  others <- numeric(ncol(cellCountsPercent))
+  cellCountsPercent <- rbind(cellCountsPercent, others)
+  colnames(cellCountsPercent) <- colnames(geneExprMatrix)
+  rownames(cellCountsPercent) <- c(colnames(refExprMatrix), "others")
+
+  return (cellCountsPercent)
+}
+
+
+#' Use weightNorm to normalize the SVM weights.  Used for SVMDECONV
+#'
+#' w1 <- weightNorm(w)
+#'
+#' @param w  The weight vector from fitting an SVM, something like something like t(fit1$coefs) \%*\% fit1$SV, where fit comes from  <- svm(m~B, nu=0.25, kernel="linear"))
+#' @return a weight vector
+weightNorm <- function(w) {
+  w[w<0] <- 0
+  return(w/sum(w))
+}
+
+
+#' Use SVMDECONV to estimate the cell count percentage
+#' David L Gibbs, dgibbs@systemsbiology.org
+#' June 9, 2017
+#'
+#' v-SVR is applied with a linear kernel to solve for f,
+#' and the best result from three values of v = {0.25, 0.5, 0.75}
+#' is saved, where ‘best’ is defined as the lowest root mean squared error
+#' between m and the deconvolution result, f x B.
+#'
+#' Our current implementation executes v-SVR using the
+#' ‘svm’ function in the R package, ‘e1071’.
+#'
+#' w2 <- SVMDECON(m, B)
+#'
+#' @param m  a matrix represenging the mixture (genes X 1 sample)
+#' @param B  a matrix representing the references (genes X cells), m should be subset to match B
+#'
+#' @export
+#' @return A matrix with cell type estimates for each samples
+SVMDECON <- function(m,B) {
+
+  # three models are fit with different values of nu
+  fit1 <- e1071::svm(m~B, nu=0.25, kernel="linear", scale=T, type="nu-regression")
+  fit2 <- e1071::svm(m~B, nu=0.50, kernel="linear", scale=T, type="nu-regression")
+  fit3 <- e1071::svm(m~B, nu=0.75, kernel="linear", scale=T, type="nu-regression")
+  # these w's are the cell fractions
+  w1 <- weightNorm(t(fit1$coefs) %*% fit1$SV)
+  w2 <- weightNorm(t(fit2$coefs) %*% fit2$SV)
+  w3 <- weightNorm(t(fit3$coefs) %*% fit3$SV)
+  # return the model with the smallest mean sq error
+  err1 <- sqrt( sum( (m - B %*% t(w1))^2 )/nrow(m) )
+  err2 <- sqrt( sum( (m - B %*% t(w2))^2 )/nrow(m) )
+  err3 <- sqrt( sum( (m - B %*% t(w3))^2 )/nrow(m) )
+  resIdx <- which(c(err1,err2,err3) == min(c(err1,err2,err3)))[1]
+  return(list(w1,w2,w3)[[resIdx]])
+}
+
+
+#' Collapse the cell types (in rows) to super-classes
+#' #Updated 09-06-18 to include MGSM36 cell types
+#'
+#' cellEnrich <- collapseCellTypes(cellCounts, method='Pheno4')
+#'
+#' @param cellCounts A matrix with cell counts
+#' @param method The method for combining cell types ('Default: 'Pheno2')
+#'               Pheno1: Original cell-type based combinations
+#'               Pheno2: Original cell-type based combinations, omitting Macrophages
+#'               Pheno3: Alt Phenotype definitions based on WMB deconvolution correlations
+#'               Pheno4: Consensus cell types
+#'               Pheno5: Consensus cell types, combined myeloma & plasma
+#'               Spillover1: Empirical combinations based on compToLM22source
+#'               Spillover2: More agressive combination based on empirical combinations based on compToLM22source
+#'               Spillover3: Combinations determined by spillToConvergence on 36 cell types
+#' @return NULL
+#' @export
+#' @return a cell estimate matrix with the names changed
+collapseCellTypes <- function(cellCounts, method='Pheno4') {
+
+  if(method == "Pheno1" | method == 'Pheno2') {
+    combList <- list(MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     HealthyBcells=c('B.cells.memory', 'B.cells.naive'),
+                     CD8s=c('T.cells.CD8'),
+                     CD4s=c('T.cells.CD4.memory.resting', 'T.cells.CD4.memory.activated', 'T.cells.CD4.naive',
+                            'T.cells.follicular.helper', 'T.cells.regulatory..Tregs.'),
+                     DendriticCells=c('Dendritic.cells.resting', 'Dendritic.cells.activated'),
+                     Myeloma=c('CustomMM', 'PlasmaMemory', 'Plasma.cells', 'MM.plasma.cell'),
+                     BMFibroblast=c('BMFibroblast','uamsBMFibroblast')
+    )
+  }
+  if(method == "Pheno1" | method == 'Pheno2') {
+    newList <- list(Macrophages=c('Macrophages.M0', 'Macrophages.M1', 'Macrophages.M2'))
+    combList <- c(combList, newList)
+  }
+
+  if(method == 'Pheno3') {
+    combList <- list(MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     HealthyBcells=c('B.cells.memory', 'B.cells.naive'),
+                     CD8s=c('T.cells.CD8'),
+                     CD4s=c('T.cells.CD4.memory.resting', 'T.cells.CD4.naive',
+                            'T.cells.follicular.helper', 'T.cells.regulatory..Tregs.'), #Keep 'T.cells.CD4.memory.activated' separate
+                     DendriticCells=c('Dendritic.cells.resting', 'Dendritic.cells.activated'),
+                     PlasmaCellMemory=c('PlasmaMemory', 'Plasma.cells'),
+                     Myeloma=c('CustomMM', 'MM.plasma.cell'),
+                     MonocyteNeutrophil=c('Monocytes', 'Neutrophils'),
+                     BMFibroblast=c('BMFibroblast','uamsBMFibroblast')
+    )
+  }
+
+  if(method == 'Pheno4') {
+    combList <- list(MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     Bcells=c('B.cells.memory', 'B.cells.naive'),
+                     CD8s=c('T.cells.CD8'),
+                     CD4s=c('T.cells.CD4.memory.resting', 'T.cells.CD4.naive', 'T.cells.CD4.memory.activated',
+                            'T.cells.follicular.helper', 'T.cells.regulatory..Tregs.'),
+                     DendriticCells=c('Dendritic.cells.resting', 'Dendritic.cells.activated'),
+                     HealthyPlasmaCell=c('PlasmaMemory', 'Plasma.cells'),
+                     Myeloma=c('CustomMM', 'MM.plasma.cell'),
+                     BMFibroblast=c('BMFibroblast','uamsBMFibroblast')
+    )
+  }
+
+  if(method == 'Pheno5') {
+    combList <- list(MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     Bcells=c('B.cells.memory', 'B.cells.naive'),
+                     CD8s=c('T.cells.CD8'),
+                     CD4s=c('T.cells.CD4.memory.resting', 'T.cells.CD4.naive', 'T.cells.CD4.memory.activated',
+                            'T.cells.follicular.helper', 'T.cells.regulatory..Tregs.'),
+                     DendriticCells=c('Dendritic.cells.resting', 'Dendritic.cells.activated'),
+                     Myeloma=c('CustomMM', 'MM.plasma.cell', 'PlasmaMemory', 'Plasma.cells'),
+                     BMFibroblast=c('BMFibroblast','uamsBMFibroblast')
+    )
+  }
+
+  if(method == 'Spillover1') {
+    #Comb B-cells
+    #Comb DC.act & M1
+    #Comb DC.rest & M0 & M2
+    #Comb Mast
+    #Comb Mono/Neutro
+    #Comb CD4.resting, CD4.naive, FHs, Tregs
+    #Comb NKs
+    #Plasma Cells alone
+    #CD4.activated alone
+    #Leave Eo alone
+    #Leave CD8s alone
+    #Leave gdTs alone
+    combList <- list(MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     HealthyBcells=c('B.cells.memory', 'B.cells.naive'),
+                     MonocyteNeutrophil=c('Monocytes', 'Neutrophils'),
+                     APC.activated=c('Dendritic.cells.activated', 'Macrophages.M1'),
+                     APC.inactive=c('Dendritic.cells.resting', 'Macrophages.M0', 'Macrophages.M2'),
+                     CD8s=c('T.cells.CD8'),
+                     CD4s.MemoryActivated= c('T.cells.CD4.memory.activated'),
+                     CD4s.others=c('T.cells.CD4.memory.resting', 'T.cells.CD4.naive',
+                                   'T.cells.follicular.helper', 'T.cells.regulatory..Tregs.'), #Keep separate
+                     PlasmaCellMemory=c('PlasmaMemory', 'Plasma.cells'),
+                     Myeloma=c('CustomMM', 'MM.plasma.cell'),
+                     BMFibroblast=c('BMFibroblast','uamsBMFibroblast')
+    )
+  }
+
+  if(method == 'Spillover2') {
+    # Eosinphils alone
+    # Monocytes+Neutrophils
+    # Mast.cells.activated/resting
+    # M1 macrophages & activated dendritic cells
+    # Adipocyte / Osteoblast
+    # B.cells memory/naive
+    # cd138p/PlasmaMemory/Plasma.cell/MM.plasma.cell
+    # T.cells.gamma.delta
+    # NK.cells act/resting
+    # osteoclast/M2/resting dendritic/M0
+    # CD8s
+    # Treg / TcelFH / memory resting / naive
+    combList <- list(Eosinophils=c('Eosinophils'),
+                     MonocyteNeutrophil=c('Monocytes', 'Neutrophils'),
+                     MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     APC.activated=c('Dendritic.cells.activated', 'Macrophages.M1'),
+                     AdipoOsteo=c('adipocyte', 'osteoblast'),
+                     HealthyBcells=c('B.cells.memory', 'B.cells.naive'),
+                     Myeloma=c('CustomMM', 'MM.plasma.cell', 'PlasmaMemory', 'Plasma.cells'),
+                     GammaDeltaT=c('T.cells.gamma.delta'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     APC.inactive=c('osteoblast', 'Dendritic.cells.resting', 'Macrophages.M0', 'Macrophages.M2'),
+                     CD8s=c('T.cells.CD8'),
+                     CD4s.MemoryActivated= c('T.cells.CD4.memory.activated'),
+                     CD4s.others=c('T.cells.CD4.memory.resting', 'T.cells.CD4.naive',
+                                   'T.cells.follicular.helper', 'T.cells.regulatory..Tregs.'), #Keep separate
+                     BMFibroblast=c('BMFibroblast','uamsBMFibroblast')
+    ) #combList
+  }
+
+  if(method == 'Spillover3') {
+    #MDSCs and CAFs should be left alone
+    combList <- list(EosinoMegakaryoEryth=c('Eosinophils','Megakaryocyte','Erythroid'),
+                     MonocyteNeutrophil=c('Monocytes', 'Neutrophils'),
+                     MastCells=c('Mast.cells.activated', 'Mast.cells.resting'),
+                     APC.activated=c('Dendritic.cells.activated', 'Macrophages.M1'),
+                     APC.resting=c('Dendritic.cells.resting', 'Macrophages.M0', 'Macrophages.M2', 'osteoclast'),
+                     AdipoLym=c('adipocyte', 'LymEndothelial'),
+                     FibroOsteoBlast = c('uamsBMFibroblast','BMFibroblast','osteoblast'),
+                     HealthyBcells=c('B.cells.memory', 'B.cells.naive', 'Plasma.cells'),
+                     Myeloma=c('CustomMM', 'MM.plasma.cell', 'PlasmaMemory', 'Haemetopoetic'),
+                     GammaDeltaT.CD4naive.FH=c('T.cells.gamma.delta','T.cells.CD4.naive', 'T.cells.follicular.helper'),
+                     NKcells=c('NK.cells.activated', 'NK.cells.resting'),
+                     CD8s.CD4sOthers=c('T.cells.CD8', 'T.cells.CD4.memory.resting', 'T.cells.CD4.memory.activated', 'T.cells.regulatory..Tregs.')
+    ) #combList
+  }
+
+  countMatrix <- cellCounts[!grepl('_', rownames(cellCounts)),]
+
+  #Add tumor & make it optional (DEFAULT to collapse to these types)
+  countMatrix.comT <- countMatrix
+  for(combCell in names(combList)) {
+    curTypes <- combList[[combCell]]
+    curTypes <- curTypes[curTypes %in% rownames(countMatrix)]
+    if(length(curTypes) == 0) { next; }
+
+    combCounts <- colSums(countMatrix[curTypes,,drop=FALSE])
+    newDF <- data.frame(newData=combCounts)
+    colnames(newDF) <- combCell
+    countMatrix.comT <- rbind(countMatrix.comT[!(rownames(countMatrix.comT) %in% curTypes),], t(newDF))
+  }
+
+  countMatrix.comT <- countMatrix.comT[order(toupper(rownames(countMatrix.comT))),]
+  countMatrix.comT <- rbind(countMatrix.comT, cellCounts[grepl('_', rownames(cellCounts)),])
+
+  return(countMatrix.comT)
+}
+
