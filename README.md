@@ -5,5 +5,7 @@ Augments existing or de-novo cell-type signature matrices to deconvolve bulk gen
 To install this package in R, use devtools.
 
 install.packages(devtools)
+
 library(devtools)
+
 devtools::install_github('sdanzige/ADAPTS')
