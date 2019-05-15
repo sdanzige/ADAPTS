@@ -9,3 +9,5 @@ install.packages('devtools')
 library(devtools)
 
 devtools::install_github('sdanzige/ADAPTS')
+
+Data for the Vignette can be found at sdanzige/ADAPTSdata and sdanziger/ADAPTSdata2
