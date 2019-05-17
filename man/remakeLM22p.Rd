@@ -6,26 +6,46 @@
 Plasma.memory, MM.  In many ways this is just a convenient wrapper for AugmentSigMatrix}
 \usage{
 remakeLM22p(exprData, fullLM22, smallLM22 = NULL, plotToPDF = TRUE,
-  condTol = 1.01, postNorm = FALSE, autoDetectMin = FALSE)
+  condTol = 1.01, postNorm = TRUE, autoDetectMin = FALSE,
+  pdfDir = tempdir(), oneCore = FALSE)
 }
 \arguments{
-\item{exprData}{The gene express data to use to augment LM22}
+\item{exprData}{The gene express data to use to augment LM22, e.g. ADAPTSdata::addMGSM27}
 
 \item{fullLM22}{LM22 data with all genes.  Available in ADAPTSdata2::fullLM22}
 
-\item{smallLM22}{The small LM22 matrix, is it includes new cell types in exprData those will not be overwritten (DEFAULT: NULL, i.e. buildLM22plus(useLM22genes = TRUE)}
+\item{smallLM22}{The small LM22 matrix, if it includes new cell types in exprData those will not be overwritten (DEFAULT: NULL, i.e. buildLM22plus(useLM22genes = TRUE)}
 
 \item{plotToPDF}{TRUE: pdf, FALSE: standard display (DEFAULT: TRUE)}
 
 \item{condTol}{The tolerance in the reconstruction algorithm.  1.0 = no tolerance, 1.05 = 5\% tolerance (DEFAULT: 1.01)}
 
-\item{postNorm}{Set to TRUE to normalize new signatures to match old signatures.  To Do: Redo Kappa curve? (DEFAULT: FALSE)}
+\item{postNorm}{Set to TRUE to normalize new signatures to match old signatures.  To Do: Redo Kappa curve? (DEFAULT: TRUE)}
 
 \item{autoDetectMin}{Set to true to automatically detect the first local minima. GOOD PRELIMINARY RESULTS (DEAFULT: FALSE)}
+
+\item{pdfDir}{A fold to write the pdf file to if plotToPDF=TRUE (DEFAULT: tempdir())}
+
+\item{oneCore}{Set to TRUE to disable parallelization (DEFAULT: FALSE)}
 }
 \value{
 a cell type signature matrix
 }
 \description{
-matData <- remakeLM22p(exprData, fullLM22)
+Use the full LM22 data matrix and add a few additional genes to cover osteoblasts, osteoclasts,
+Plasma.memory, MM.  In many ways this is just a convenient wrapper for AugmentSigMatrix
+}
+\examples{
+#This toy example treats the LM22 deconvolution matrix as if it were all of the data
+#  For a real example, look at the vignette or comments in exprData, fullLM22, small LM22
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:200, 1:8]
+#Make a fake signature matrix out of 100 genes and the first 8 cell types
+smallLM22 <- fullLM22[1:100, 1:8] 
+
+#Make fake data representing two replicates of purified Mast.cells 
+exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
+colnames(exprData) <- c("Mast.cells", "Mast.cells")
+newSig <- remakeLM22p(exprData=exprData, fullLM22=fullLM22, smallLM22=smallLM22, 
+    plotToPDF=FALSE, oneCore=TRUE)
 }

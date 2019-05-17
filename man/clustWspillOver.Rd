@@ -4,16 +4,26 @@
 \alias{clustWspillOver}
 \title{Build clusters based on n-pass spillover matrix}
 \usage{
-clustWspillOver(sigMatrix, geneExpr)
+clustWspillOver(sigMatrix, geneExpr, nPasses = 100)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
 
 \item{geneExpr}{The source gene expression matrix used to calculate sigMatrix.}
+
+\item{nPasses}{The maximum number of iterations for spillToConvergence (DEFAULT: 100)}
 }
 \value{
 Cell types grouped by cluster
 }
 \description{
-allClusters <- clustWspillOver(sigMatrix, geneExpr)
+Build clusters based on n-pass spillover matrix
+}
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+clusters <- clustWspillOver(sigMatrix=smallLM22, geneExpr=fullLM22, nPasses=10)
 }

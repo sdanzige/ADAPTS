@@ -4,23 +4,36 @@
 \alias{heirarchicalClassify}
 \title{Build clusters based on n-pass spillover matrix}
 \usage{
-heirarchicalClassify(sigMatrix, geneExpr, toPred, heirarchData = NULL)
+heirarchicalClassify(sigMatrix, geneExpr, toPred, heirarchData = NULL,
+  pdfDir = tempdir(), oneCore = FALSE, nPasses = 100)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
 
-\item{geneExpr}{The source gene expression matrix used to calculate refExpr}
+\item{geneExpr}{The source gene expression matrix used to calculate sigMatrix}
 
 \item{toPred}{The gene expression to ultimately deconvolve}
 
 \item{heirarchData}{The results of heirarchicalSplit OR heirarchicalSplit.sc (DEFAULT: NULL, ie heirarchicalSplit)}
+
+\item{pdfDir}{A fold to write the pdf file to (DEFAULT: tempdir())}
+
+\item{oneCore}{Set to TRUE to disable parallelization (DEFAULT: FALSE)}
+
+\item{nPasses}{The maximum number of iterations for spillToConvergence (DEFAULT: 100)}
 }
 \value{
-a mtrix of cell counts
+a matrix of cell counts
 }
 \description{
-cellCounts <- heirarchicalClassify(sigMatrix, geneExpr, toPred, heirarchData=NULL)
+Build clusters based on n-pass spillover matrix
 }
-\details{
-UNDER DEVELOPMENT: USE AT YOUR OWN RISK
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+cellCounts <- heirarchicalClassify(sigMatrix=smallLM22, geneExpr=fullLM22, toPred=fullLM22, 
+    oneCore=TRUE, nPasses=10)
 }

@@ -8,21 +8,32 @@
   Deconvolution matrices are then built to separate the cell types that formerly could
   not be separated.}
 \usage{
-heirarchicalSplit(sigMatrix, geneExpr)
+heirarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
 
 \item{geneExpr}{The source gene expression matrix used to calculate sigMatrix}
+
+\item{oneCore}{Set to TRUE to disable parallelization (DEFAULT: FALSE)}
+
+\item{nPasses}{The maximum number of iterations for spillToConvergence (DEFAULT: 100)}
 }
 \value{
 A list of clusters and a list of signature matrices for breaking those clusters
 }
 \description{
-heirarchData <- heirarchicalSplit(sigMatrix, geneExpr)
+Attempt to deconvolve cell types by building a heriarchy of cell types using
+  spillToConvergence to determine cell types that are not signficantly different.
+  First deconvolve those clusters of cell types.
+  Deconvolution matrices are then built to separate the cell types that formerly could
+  not be separated.
 }
-\details{
-UNDER DEVELOPMENT: USE AT YOUR OWN RISK
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
 
-heirarchData <- heirarchicalSplit(sigMatrix, geneExpr)
+clusters <- heirarchicalSplit(sigMatrix=smallLM22, geneExpr=fullLM22, oneCore=TRUE, nPasses=10)
 }

@@ -2,7 +2,8 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{AugmentSigMatrix}
 \alias{AugmentSigMatrix}
-\title{Use a t-test to rank to features for each cell type
+\title{Build an augmented signature matrix from an initial signature matrix, source data, and a list of differentially expressed genes (gList)
+ The user might want to modify gList to make certain that particular genes are included in the matrix
  The algorithm will be to add one additional gene from each new cell type
  Record the condition number, and plot those.
  Will only consider adding rows shared by fullData and newData}
@@ -10,7 +11,7 @@
 AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
   plotToPDF = TRUE, imputeMissing = TRUE, condTol = 1.01,
   postNorm = FALSE, minSumToRem = NA, addTitle = NULL,
-  autoDetectMin = FALSE, calcSpillOver = FALSE)
+  autoDetectMin = FALSE, calcSpillOver = FALSE, pdfDir = tempdir())
 }
 \arguments{
 \item{origMatrix}{The original signature matrix}
@@ -25,11 +26,11 @@ AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
 
 \item{plotToPDF}{Plot the output condition numbers to a pdf file. (DEFAULT: TRUE)}
 
-\item{imputeMissing}{Set to TRUE to impute missing values. (DEFAULT: TRUE)}
+\item{imputeMissing}{Set to TRUE to impute missing values. NOTE: adds stoachasiticity (DEFAULT: TRUE)}
 
-\item{condTol}{Setting higher tolerances will result in smaller numbers extra genes.  1.00 minimized compliment number, 1.01 should be better.  <1 shouldn't work (DEFAULT: 1.00)}
+\item{condTol}{Setting higher tolerances will result in smaller numbers extra genes. 1.00 minimizes compliment number (DEFAULT: 1.00)}
 
-\item{postNorm}{Set to TRUE to normalize new signatures to match old signatures.  To Do: Redo Kappa curve? (DEFAULT: FALSE)}
+\item{postNorm}{Set to TRUE to normalize new signatures to match old signatures.  (DEFAULT: FALSE)}
 
 \item{minSumToRem}{Set to non-NA to remove any row with the sum(abs(row)) < minSumToRem (DEFAULT: NA)}
 
@@ -38,10 +39,32 @@ AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
 \item{autoDetectMin}{Set to true to automatically detect the first local minima. GOOD PRELIMINARY RESULTS (DEAFULT: FALSE)}
 
 \item{calcSpillOver}{Use the training data to calculate a spillover matrix (DEFAULT: FALSE)}
+
+\item{pdfDir}{A fold to write the pdf file to if plotToPDF=TRUE (DEFAULT: tempdir())}
 }
 \value{
 an augmented cell type signature matrix
 }
 \description{
 newMatData <- AugmentSigMatrix(origMatrix, fullData, newData)
+}
+\examples{
+#This toy example treats the LM22 deconvolution matrix as if it were all of the data
+#  For a real example, look at the vignette or comments in exprData, fullLM22, small LM22
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:200, 1:8]
+#Make a fake signature matrix out of 100 genes and the first 8 cell types
+smallLM22 <- fullLM22[1:100, 1:8] 
+
+#Make fake data representing two replicates of purified Mast.cells 
+exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
+colnames(exprData) <- c("Mast.cells", "Mast.cells")
+
+#Fake source data with replicates for all purified cell types.
+#  Note in this fake data set, many cell types have exactly one replicate
+fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
+gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
+
+newSig <- AugmentSigMatrix(origMatrix=smallLM22, fullData=fullLM22, newData=exprData, 
+    gList=gList, plotToPDF=FALSE)
 }

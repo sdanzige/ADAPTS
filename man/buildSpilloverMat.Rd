@@ -19,3 +19,11 @@ A spillover matrix showing how purified cell types deconvolve
 \description{
 spillExpr <- buildSpilloverMat(refExpr, geneExpr, method='DCQ')
 }
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+spillover <- buildSpilloverMat(refExpr=smallLM22, geneExpr=fullLM22)
+}

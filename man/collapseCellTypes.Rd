@@ -24,5 +24,15 @@ Spillover3: Combinations determined by spillToConvergence on 36 cell types}
 a cell estimate matrix with the names changed
 }
 \description{
-cellEnrich <- collapseCellTypes(cellCounts, method='Pheno4')
+Collapse the cell types (in rows) to super-classes
+#Updated 09-06-18 to include MGSM36 cell types
+}
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+cellEst <- estCellPercent.DCQ(refExpr=smallLM22, geneExpr=fullLM22)
+collapseCounts <- collapseCellTypes(cellCounts=cellEst)
 }

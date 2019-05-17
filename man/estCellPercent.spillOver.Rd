@@ -22,5 +22,14 @@ estCellPercent.spillOver(spillExpr, refExpr, geneExpr, method = "DCQ",
 a matrix of estimate cell type percentages in samples
 }
 \description{
-cellEst <- estCellPercent.spillOver(spillExpr, refExpr,  geneExpr, method='DCQ')
+Use a spillover matrix to deconvolve a samples
+}
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+spillover <- buildSpilloverMat(refExpr=smallLM22, geneExpr=fullLM22) 
+cellEst <- estCellPercent.spillOver(spillExpr=spillover, refExpr=smallLM22, geneExpr=fullLM22)
 }

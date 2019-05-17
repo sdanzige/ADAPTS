@@ -2,13 +2,14 @@ Package: ADAPTS
 Type: Package
 Title: Automated Deconvolution Augmentation of Profiles for Tissue
         Specific Cells
-Version: 0.9.5
+Version: 0.9.14
 Author: Samuel A Danziger
 Maintainer: Samuel A Danziger <sam.danziger@gmail.com>
 Copyright: Celgene Corporation
-Description: Augments existing or de-novo cell-type signature matrices to deconvolve bulk gene expression data
-    This package expands on the techniques outlined in Newman et al.'s 2015 Nature Methods paper: 
-    'Robust enumeration of cell subsets from tissue expression profiles'. to allow a user to easily add
+Description: Augments existing or de-novo cell-type signature matrices to deconvolve bulk gene expression data.
+    This package expands on the techniques outlined in Newman AM, Liu CL, Green MR, Gentles AJ, Feng W, Xu Y, 
+    Hoang CD, Diehn M, Alizadeh, AA (2015) <doi:10.1038/nmeth.3337>'s Nature Methods paper: 
+    'Robust enumeration of cell subsets from tissue expression profiles'  to allow a user to easily add
     their own cell types (e.g. a tumor specific cell type) to Newman's LM22 or other signature matrix. 
 License: MIT + file LICENSE
 Encoding: UTF-8
@@ -17,8 +18,8 @@ RoxygenNote: 6.1.1
 Depends: R (>= 3.3.0)
 biocViews:
 Imports: missForest, e1071, WGCNA, ComICS, pheatmap, doParallel, quantmod,
-        preprocessCore, pcaMethods, foreach
-Suggests: DeconRNASeq, R.rsp
+        preprocessCore, pcaMethods, foreach, DeconRNASeq
+Suggests: R.rsp
 VignetteBuilder: R.rsp
 NeedsCompilation: no
 Packaged: 2019-05-09 18:53:03 UTC; sdanziger

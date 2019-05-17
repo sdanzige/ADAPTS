@@ -24,3 +24,11 @@ A list of signature matrices
 \description{
 deconMatrices <- spillToConvergence(sigMatrix, geneExpr, 100, FALSE, TRUE)
 }
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+deconMatrices <- spillToConvergence(sigMatrix=smallLM22, geneExpr=fullLM22, nPasses=10, plotIt=TRUE)
+}

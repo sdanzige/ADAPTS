@@ -12,3 +12,6 @@ a map of cell types names
 \description{
 Load a map of cell type names
 }
+\examples{
+cellMap <- getLM22cells()
+}

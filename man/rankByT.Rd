@@ -4,16 +4,35 @@
 \alias{rankByT}
 \title{Use a t-test to rank to features for each cell type}
 \usage{
-rankByT(geneExpr, qCut = 0.3)
+rankByT(geneExpr, qCut = 0.3, oneCore = FALSE)
 }
 \arguments{
 \item{geneExpr}{The gene expression data}
 
 \item{qCut}{(DEFAULT: 0.3)}
+
+\item{oneCore}{Set to TRUE to disa ble paralellization (DEFAULT: FALSE)}
 }
 \value{
 a list of cell types with data frames ranking genes
 }
 \description{
 gList <- rankByT(geneExpr, qCut=0.3)
+}
+\examples{
+#This toy example treats the LM22 deconvolution matrix as if it were all of the data
+#  For a real example, look at the vignette or comments in exprData, fullLM22, small LM22
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:200, 1:8]
+#Make a fake signature matrix out of 100 genes and the first 8 cell types
+smallLM22 <- fullLM22[1:100, 1:8] 
+
+#Make fake data representing two replicates of purified Mast.cells 
+exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
+colnames(exprData) <- c("Mast.cells", "Mast.cells")
+
+#Fake source data with replicates for all purified cell types.
+#  Note in this fake data set, many cell types have exactly one replicate
+fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
+gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
 }

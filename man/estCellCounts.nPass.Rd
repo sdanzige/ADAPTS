@@ -17,3 +17,12 @@ An estimate of cell counts
 \description{
 curExpr <- estCellCounts.nPass(sigMatrix, deconMatrices)
 }
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+deconMatrices <- spillToConvergence(sigMatrix=smallLM22, geneExpr=fullLM22, nPasses=10)
+cellCounts <- estCellCounts.nPass(geneExpr=fullLM22, deconMatrices=deconMatrices)
+}

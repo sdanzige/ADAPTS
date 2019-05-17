@@ -26,3 +26,11 @@ A matrix with cell type estimates for each samples
 \details{
 cellEst <- estCellPercent.DeconRNASeq(refExpr,  geneExpr, marker_set=NULL)
 }
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+cellEst <- estCellPercent.DeconRNASeq(refExpr=smallLM22, geneExpr=fullLM22)
+}

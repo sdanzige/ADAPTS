@@ -10,5 +10,8 @@ loadMGSM27()
 The MGSM27 signature matrix from Identifying a High-risk Cellular Signature in the Multiple Myeloma Bone Marrow Microenvironment
 }
 \description{
+Load the MGSM27 signature matrix
+}
+\examples{
 MGSM27 <- loadMGSM27()
 }

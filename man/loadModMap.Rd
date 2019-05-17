@@ -10,5 +10,8 @@ loadModMap()
 A map between xCell cell type names and LM22 cell type names
 }
 \description{
-xCellMap <- loadModMap()
+Load the LM22 xCell map
+}
+\examples{
+xcellMap <- loadModMap()
 }

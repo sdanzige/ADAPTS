@@ -21,3 +21,11 @@ A matrix with cell type estimates for each samples
 \description{
 cellEst <- estCellPercent.proportionsInAdmixture(refExpr)
 }
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+cellEst <- estCellPercent.proportionsInAdmixture(refExpr=smallLM22, geneExpr=fullLM22)
+}

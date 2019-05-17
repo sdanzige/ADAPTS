@@ -3,7 +3,8 @@
 \name{missForest.par}
 \alias{missForest.par}
 \title{Use parallel missForest to impute missing values.
-  This wrapper is required because missForest crashed if you have more cores than variables.}
+  This wrapper is required because missForest crashed if you have more cores than variables.
+  This will default to no parellelization for Windows}
 \usage{
 missForest.par(dataMat, parallelize = "variables")
 }
@@ -13,8 +14,14 @@ missForest.par(dataMat, parallelize = "variables")
 \item{parallelize}{split on 'forests' or 'variables' (DEFAULT: 'variables')}
 }
 \value{
-a matrxin including imputed values
+a matrix including imputed values
 }
 \description{
 newMatrix <- missForest.par(dataMat)
+}
+\examples{
+library(ADAPTS)
+LM22 <- ADAPTS::LM22
+LM22[2,3] <- as.numeric(NA) #Make some missing data to impute
+LM22.imp <- missForest.par(LM22)
 }

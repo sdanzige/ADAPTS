@@ -26,5 +26,15 @@ estCellPercent.DCQ(refExpr, geneExpr, marker_set = NULL,
 A matrix with cell type estimates for each samples
 }
 \description{
-cellEst <- estCellPercent.DCQ(refExpr,  geneExpr, marker_set, number_of_repeats=10, alpha=0.05, lambda=0.2)
+Use DCQ to estimate the cell count percentage
+Requires installation of package 'ComICS'
+  To Do: Also report the standard deviation as a confidence metric
+}
+\examples{
+#This toy example 
+library(ADAPTS)
+fullLM22 <- ADAPTS::LM22[1:30, 1:4]
+smallLM22 <- fullLM22[1:25,] 
+
+cellEst <- estCellPercent.DCQ(refExpr=smallLM22, geneExpr=fullLM22)
 }

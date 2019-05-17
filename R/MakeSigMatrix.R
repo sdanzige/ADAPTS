@@ -4,6 +4,7 @@ globalVariables(c('fe_cType', 'fe_curGene'))
 
 #' Use parallel missForest to impute missing values.
 #'   This wrapper is required because missForest crashed if you have more cores than variables.
+#'   This will default to no parellelization for Windows
 #'
 #'   newMatrix <- missForest.par(dataMat)
 #'
@@ -11,21 +12,31 @@ globalVariables(c('fe_cType', 'fe_curGene'))
 #' @param parallelize  split on 'forests' or 'variables' (DEFAULT: 'variables')
 #'
 #' @export
-#' @return a matrxin including imputed values
+#' @return a matrix including imputed values
+#' @examples
+#' library(ADAPTS)
+#' LM22 <- ADAPTS::LM22
+#' LM22[2,3] <- as.numeric(NA) #Make some missing data to impute
+#' LM22.imp <- missForest.par(LM22)
 missForest.par <- function(dataMat, parallelize = "variables") {
 
-  fixCores <- ncol(dataMat) < getDoParWorkers()
-
-  if (fixCores) {
-    oldCores <- getDoParWorkers()
-    if(ncol(dataMat) == 1 ) {
-      parallelize <- 'no'
-    } else {
-      options(mc.cores = ncol(dataMat))
-      options(cores = ncol(dataMat))
-      doParallel::registerDoParallel(cores = ncol(dataMat))
-    } #if(ncol(dataMat) == 1 ) {
-  } #if (fixCores) {
+  if (.Platform$OS.type == 'windows') {
+    parallelize <- 'no'
+    fixCores <- FALSE
+  } else {
+    fixCores <- ncol(dataMat) < getDoParWorkers()
+  
+    if (fixCores) {
+      oldCores <- getDoParWorkers()
+      if(ncol(dataMat) == 1) {
+        parallelize <- 'no'
+      } else {
+        options(mc.cores = ncol(dataMat))
+        options(cores = ncol(dataMat))
+        doParallel::registerDoParallel(cores = ncol(dataMat))
+      } #if(ncol(dataMat) == 1 ) {
+    } #if (fixCores) {
+  } #if (.Platform$OS.type == 'windows') {
 
   newMatrix <- try(missForest::missForest(dataMat, parallelize = parallelize)$ximp)
 
@@ -46,18 +57,32 @@ missForest.par <- function(dataMat, parallelize = "variables") {
 #' Use the full LM22 data matrix and add a few additional genes to cover osteoblasts, osteoclasts,
 #' Plasma.memory, MM.  In many ways this is just a convenient wrapper for AugmentSigMatrix
 #'
-#' matData <- remakeLM22p(exprData, fullLM22)
 #'
-#' @param exprData  The gene express data to use to augment LM22
+#' @param exprData  The gene express data to use to augment LM22, e.g. ADAPTSdata::addMGSM27
 #' @param fullLM22  LM22 data with all genes.  Available in ADAPTSdata2::fullLM22
-#' @param smallLM22  The small LM22 matrix, is it includes new cell types in exprData those will not be overwritten (DEFAULT: NULL, i.e. buildLM22plus(useLM22genes = TRUE)
+#' @param smallLM22  The small LM22 matrix, if it includes new cell types in exprData those will not be overwritten (DEFAULT: NULL, i.e. buildLM22plus(useLM22genes = TRUE)
 #' @param plotToPDF  TRUE: pdf, FALSE: standard display (DEFAULT: TRUE)
 #' @param condTol  The tolerance in the reconstruction algorithm.  1.0 = no tolerance, 1.05 = 5\% tolerance (DEFAULT: 1.01)
-#' @param postNorm  Set to TRUE to normalize new signatures to match old signatures.  To Do: Redo Kappa curve? (DEFAULT: FALSE)
+#' @param postNorm  Set to TRUE to normalize new signatures to match old signatures.  To Do: Redo Kappa curve? (DEFAULT: TRUE)
 #' @param autoDetectMin Set to true to automatically detect the first local minima. GOOD PRELIMINARY RESULTS (DEAFULT: FALSE)
+#' @param pdfDir  A fold to write the pdf file to if plotToPDF=TRUE (DEFAULT: tempdir())
+#' @param oneCore Set to TRUE to disable parallelization (DEFAULT: FALSE)
 #' @export
 #' @return a cell type signature matrix
-remakeLM22p <- function(exprData, fullLM22, smallLM22=NULL, plotToPDF=TRUE, condTol = 1.01, postNorm=FALSE, autoDetectMin = FALSE) {
+#' @examples
+#' #This toy example treats the LM22 deconvolution matrix as if it were all of the data
+#' #  For a real example, look at the vignette or comments in exprData, fullLM22, small LM22
+#' library(ADAPTS)
+#' fullLM22 <- ADAPTS::LM22[1:200, 1:8]
+#' #Make a fake signature matrix out of 100 genes and the first 8 cell types
+#' smallLM22 <- fullLM22[1:100, 1:8] 
+#' 
+#' #Make fake data representing two replicates of purified Mast.cells 
+#' exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
+#' colnames(exprData) <- c("Mast.cells", "Mast.cells")
+#' newSig <- remakeLM22p(exprData=exprData, fullLM22=fullLM22, smallLM22=smallLM22, 
+#'     plotToPDF=FALSE, oneCore=TRUE)
+remakeLM22p <- function(exprData, fullLM22, smallLM22=NULL, plotToPDF=TRUE, condTol = 1.01, postNorm=TRUE, autoDetectMin = FALSE, pdfDir=tempdir(), oneCore=FALSE) {
   exprData <- as.data.frame(exprData)
 
   if (is.null(smallLM22)) {
@@ -82,21 +107,23 @@ remakeLM22p <- function(exprData, fullLM22, smallLM22=NULL, plotToPDF=TRUE, cond
   fName <- paste('gList', paste(rev(unique(colnames(geneExpr))), collapse="_"), 'RData', sep='.')
   if(nchar(fName) > 240) { print('Truncating name list.  File name may not be unique') }
   fName <- paste0(strtrim(fName, 240),'.RData')  #Avoid too long filesnames, but introduct possible bug where two specs can generate the same file
-
+  fName <- file.path(tempdir(), fName)
+  
   if(!file.exists(fName)) {
-    gList <- rankByT(geneExpr = geneExpr, qCut=0.3)
+    gList <- rankByT(geneExpr = geneExpr, qCut=0.3, oneCore=oneCore)
     save(gList, file=fName)
   } else {
     gList <- get(load(fName)[1])
   }
 
   #Normalize the new expression data against the full data?
-  newMatData <- AugmentSigMatrix(origMatrix=smallLM22, fullData=fullLM22[rNames,], newData=exprData[rNames,], gList=gList, plotToPDF = plotToPDF, condTol = condTol, postNorm=postNorm, autoDetectMin=autoDetectMin)
+  newMatData <- AugmentSigMatrix(origMatrix=smallLM22, fullData=fullLM22[rNames,], newData=exprData[rNames,], gList=gList, plotToPDF = plotToPDF, condTol = condTol, postNorm=postNorm, autoDetectMin=autoDetectMin, pdfDir=pdfDir)
 
   return(newMatData=as.data.frame(newMatData))
 }
 
-#' Use a t-test to rank to features for each cell type
+#' Build an augmented signature matrix from an initial signature matrix, source data, and a list of differentially expressed genes (gList)
+#'  The user might want to modify gList to make certain that particular genes are included in the matrix
 #'  The algorithm will be to add one additional gene from each new cell type
 #'  Record the condition number, and plot those.
 #'  Will only consider adding rows shared by fullData and newData
@@ -109,16 +136,36 @@ remakeLM22p <- function(exprData, fullLM22, smallLM22=NULL, plotToPDF=TRUE, cond
 #' @param gList  The ordered list of genes from running rankByT() on newData. NOTE: best genes at the bottom!!
 #' @param nGenes  The number of additional genes to consider (DEFAULT: 1:100)
 #' @param plotToPDF  Plot the output condition numbers to a pdf file. (DEFAULT: TRUE)
-#' @param imputeMissing  Set to TRUE to impute missing values. (DEFAULT: TRUE)
-#' @param condTol  Setting higher tolerances will result in smaller numbers extra genes.  1.00 minimized compliment number, 1.01 should be better.  <1 shouldn't work (DEFAULT: 1.00)
-#' @param postNorm  Set to TRUE to normalize new signatures to match old signatures.  To Do: Redo Kappa curve? (DEFAULT: FALSE)
+#' @param imputeMissing  Set to TRUE to impute missing values. NOTE: adds stoachasiticity (DEFAULT: TRUE)
+#' @param condTol  Setting higher tolerances will result in smaller numbers extra genes. 1.00 minimizes compliment number (DEFAULT: 1.00)
+#' @param postNorm  Set to TRUE to normalize new signatures to match old signatures.  (DEFAULT: FALSE)
 #' @param minSumToRem  Set to non-NA to remove any row with the sum(abs(row)) < minSumToRem (DEFAULT: NA)
 #' @param addTitle  An optional string to add to the plot and savefile (DEFAULT: NULL)
 #' @param autoDetectMin Set to true to automatically detect the first local minima. GOOD PRELIMINARY RESULTS (DEAFULT: FALSE)
 #' @param calcSpillOver Use the training data to calculate a spillover matrix (DEFAULT: FALSE)
+#' @param pdfDir  A fold to write the pdf file to if plotToPDF=TRUE (DEFAULT: tempdir())
 #' @export
 #' @return an augmented cell type signature matrix
-AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100, plotToPDF=TRUE, imputeMissing=TRUE, condTol=1.01, postNorm=FALSE, minSumToRem=NA, addTitle=NULL, autoDetectMin=FALSE, calcSpillOver=FALSE) {
+#' @examples
+#' #This toy example treats the LM22 deconvolution matrix as if it were all of the data
+#' #  For a real example, look at the vignette or comments in exprData, fullLM22, small LM22
+#' library(ADAPTS)
+#' fullLM22 <- ADAPTS::LM22[1:200, 1:8]
+#' #Make a fake signature matrix out of 100 genes and the first 8 cell types
+#' smallLM22 <- fullLM22[1:100, 1:8] 
+#' 
+#' #Make fake data representing two replicates of purified Mast.cells 
+#' exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
+#' colnames(exprData) <- c("Mast.cells", "Mast.cells")
+#' 
+#' #Fake source data with replicates for all purified cell types.
+#' #  Note in this fake data set, many cell types have exactly one replicate
+#' fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
+#' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
+#' 
+#' newSig <- AugmentSigMatrix(origMatrix=smallLM22, fullData=fullLM22, newData=exprData, 
+#'     gList=gList, plotToPDF=FALSE)
+AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100, plotToPDF=TRUE, imputeMissing=TRUE, condTol=1.01, postNorm=FALSE, minSumToRem=NA, addTitle=NULL, autoDetectMin=FALSE, calcSpillOver=FALSE, pdfDir=tempdir()) {
   origMatrix <- as.data.frame(origMatrix)
   if(autoDetectMin == TRUE) {
     if(!is.null(addTitle)) {
@@ -253,6 +300,7 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 
   if(plotToPDF == TRUE) {
     pdfFile <- paste('AugmentSigMatrix', condTol, Sys.Date(), 'pdf', sep='.')
+    pdfFile <- file.path(pdfDir, pdfFile)
     if(!is.null(addTitle)) { pdfFile <- sub('\\.pdf$', paste0('.', addTitle, '.pdf'), pdfFile) }
     if(imputeMissing) { pdfFile <- sub('\\.pdf', '.impute.pdf', pdfFile) }
     if(postNorm) { pdfFile <- sub('\\.pdf', '.postNorm.pdf', pdfFile) }
@@ -337,13 +385,30 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #'
 #' @param geneExpr  The gene expression data
 #' @param qCut  (DEFAULT: 0.3)
+#' @param oneCore Set to TRUE to disa ble paralellization (DEFAULT: FALSE)
 #' @export
 #' @return a list of cell types with data frames ranking genes
-rankByT <- function(geneExpr, qCut=0.3) {
+#' @examples
+#' #This toy example treats the LM22 deconvolution matrix as if it were all of the data
+#' #  For a real example, look at the vignette or comments in exprData, fullLM22, small LM22
+#' library(ADAPTS)
+#' fullLM22 <- ADAPTS::LM22[1:200, 1:8]
+#' #Make a fake signature matrix out of 100 genes and the first 8 cell types
+#' smallLM22 <- fullLM22[1:100, 1:8] 
+#' 
+#' #Make fake data representing two replicates of purified Mast.cells 
+#' exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
+#' colnames(exprData) <- c("Mast.cells", "Mast.cells")
+#' 
+#' #Fake source data with replicates for all purified cell types.
+#' #  Note in this fake data set, many cell types have exactly one replicate
+#' fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
+#' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
+rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE) {
   colnames(geneExpr) <- sub('\\.[0-9]+$', '', colnames(geneExpr)) #Strip any trailing numbers added by make.names()
   cTypes <- unique(colnames(geneExpr))
 
-  if(length(cTypes) > 2) {
+  if(length(cTypes) > 2 & oneCore==FALSE) {
     gList <- foreach (fe_cType = cTypes) %dopar% {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
@@ -367,16 +432,25 @@ rankByT <- function(geneExpr, qCut=0.3) {
     } #for (cType in unique(colnames(geneExpr))) {
     names(gList) <- cTypes
   } else {
-    cTypes <- cTypes[2]
-    gList <- foreach (fe_cType = cTypes) %do% {
+    if(length(cTypes) <= 2) {cTypes <- cTypes[2]}
+    gList <- lapply(cTypes, function(fe_cType) {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
-      tRes <- parallel::mclapply(rownames(geneExpr), function(x) {
-        rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
-        if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
-        return(rv)
-      }) #tRes <- mclapply(gNames, function(x) {
-
+      
+      if(oneCore==TRUE) {
+        tRes <- lapply(rownames(geneExpr), function(x) {
+          rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
+          if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
+          return(rv)
+        }) #tRes <- mclapply(gNames, function(x) {
+      } else {
+        tRes <- parallel::mclapply(rownames(geneExpr), function(x) {
+          rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
+          if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
+          return(rv)
+        }) #tRes <- mclapply(gNames, function(x) {
+      }
+        
       geneDF <- do.call(rbind, lapply(tRes, function(x) {data.frame(rat=x$estimate[1]/x$estimate[2], t=x$statistic, pVal=x$p.value)}))
       rownames(geneDF) <- rownames(geneExpr)
       geneDF$qVal <- stats::p.adjust(geneDF$pVal, method = 'fdr')
@@ -387,58 +461,19 @@ rankByT <- function(geneExpr, qCut=0.3) {
       geneDF <- geneDF[!is.na(geneDF$rat), ]
       #gList[[cType]] <- geneDF
       return(geneDF)
-    } #for (cType in unique(colnames(geneExpr))) {
+    }) #for (cType in unique(colnames(geneExpr))) {
     names(gList) <- cTypes
   } #if(length(cTypes) > 1) {
 
   return(gList)
 }
 
-#' Use a t-test to rank to features for each cell type.
-#'   Single core version
-#'
-#'   gList <- rankByT.oneCore(geneExpr, qCut=0.3)
-#'
-#' @param geneExpr  The gene expression data
-#' @param qCut  (DEFAULT: 0.3)
-#' @export
-#' @return a list of cell types with data frames ranking genes
-rankByT.oneCore <- function(geneExpr, qCut=0.3) {
-  colnames(geneExpr) <- sub('\\.[0-9]+$', '', colnames(geneExpr)) #Strip any trailing numbers added by make.names()
-  cTypes <- unique(colnames(geneExpr))
-
-  gList <- list()
-  for (cType in cTypes) {
-      print(cType)
-      isType <- colnames(geneExpr) == cType
-      tRes <- lapply(rownames(geneExpr), function(x) {
-        rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
-        if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
-        return(rv)
-      }) #tRes <- mclapply(gNames, function(x) {
-
-      geneDF <- do.call(rbind, lapply(tRes, function(x) {data.frame(rat=x$estimate[1]/x$estimate[2], t=x$statistic, pVal=x$p.value)}))
-      geneDF$rat[is.nan(geneDF$rat)] <- 1
-      rownames(geneDF) <- rownames(geneExpr)
-      geneDF$qVal <- stats::p.adjust(geneDF$pVal, method = 'fdr')
-
-      #03-20-18:  This seems wierd to me.  Shouldn't I have used abs(log(geneDF$rat))
-      geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
-      geneDF <- geneDF[geneDF$qVal <= qCut,]
-
-      geneDF <- geneDF[!is.na(geneDF$rat), ]
-      gList[[cType]] <- geneDF
-  } #for (cType in unique(colnames(geneExpr))) {
-
-  return(gList)
-}
-
 #' Load the MGSM27 signature matrix
-#'
-#' MGSM27 <- loadMGSM27()
 #'
 #' @export
 #' @return  The MGSM27 signature matrix from Identifying a High-risk Cellular Signature in the Multiple Myeloma Bone Marrow Microenvironment
+#' @examples
+#' MGSM27 <- loadMGSM27()
 loadMGSM27 <- function() {
   MGSM27 <- ADAPTS::MGSM27
   return(MGSM27)
@@ -446,9 +481,10 @@ loadMGSM27 <- function() {
 
 #' Load a map of cell type names
 #'
-#'
 #' @export
 #' @return a map of cell types names
+#' @examples
+#' cellMap <- getLM22cells()
 getLM22cells <- function() {
   mapTypes <- list('naive B-cells',       # B.cells.naive
                    'Memory B-cells',      # B.cells.memory
@@ -483,10 +519,10 @@ getLM22cells <- function() {
 
 #' Load the LM22 xCell map
 #'
-#' xCellMap <- loadModMap()
-#'
 #' @export
 #' @return A map between xCell cell type names and LM22 cell type names
+#' @examples
+#' xcellMap <- loadModMap()
 loadModMap <- function() {
   modMap <- rbind(c('naive B-cells', 'B.cells.naive'),
                   c('Memory B-cells','B.cells.memory'),
@@ -517,7 +553,7 @@ loadModMap <- function() {
   return(modMap)
 }
 
-#  Function removed to pass R CMD check --as-cran because xCell is on GitHub not CRAN
+#  Function removed to pass R CMD check --as-cran because xCell is on GitHub not CRAN. 
 #
 # #' Use xCellSignifcanceBetaDist in xCell to estimate the probability that a cell type is in a sample.
 # #'
@@ -529,7 +565,7 @@ loadModMap <- function() {
 # #' @return cell type p-values
 # estxCellSig <- function(geneExpr.pbmc, rnaseq = FALSE) {
 
-#  if(!'xCell' %in% rownames(utils::installed.packages())) {
+#  if(!require('xCell')) {
 #    message('This function requires the xCell package')
 #    message('It can be found here: https://github.com/dviraran/xCell')
 #    return(NULL)
