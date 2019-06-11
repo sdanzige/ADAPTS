@@ -3,10 +3,11 @@
 #' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
 #' @param geneExpr  The source gene expression matrix used to calculate sigMatrix
 #' @param toPred  The gene expression to ultimately deconvolve
-#' @param heirarchData  The results of heirarchicalSplit OR heirarchicalSplit.sc (DEFAULT: NULL, ie heirarchicalSplit)
+#' @param hierarchData  The results of hierarchicalSplit OR hierarchicalSplit.sc (DEFAULT: NULL, ie hierarchicalSplit)
 #' @param pdfDir  A fold to write the pdf file to (DEFAULT: tempdir())
 #' @param oneCore Set to TRUE to disable parallelization (DEFAULT: FALSE)
 #' @param nPasses  The maximum number of iterations for spillToConvergence (DEFAULT: 100)
+#' @param remZinf Set to TRUE to remove any ratio with zero or infinity when generating gList (DEFAULT: FALSE)
 #' @export
 #' @return a matrix of cell counts
 #' @examples
@@ -15,11 +16,11 @@
 #' fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 #' smallLM22 <- fullLM22[1:25,] 
 #' 
-#' cellCounts <- heirarchicalClassify(sigMatrix=smallLM22, geneExpr=fullLM22, toPred=fullLM22, 
+#' cellCounts <- hierarchicalClassify(sigMatrix=smallLM22, geneExpr=fullLM22, toPred=fullLM22, 
 #'     oneCore=TRUE, nPasses=10)
-heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL, pdfDir=tempdir(), oneCore=FALSE, nPasses=100) {
-  if(is.null(heirarchData)) {
-    heirarchData <- heirarchicalSplit(sigMatrix, geneExpr, oneCore=oneCore, nPasses=nPasses)
+hierarchicalClassify <- function(sigMatrix, geneExpr, toPred, hierarchData=NULL, pdfDir=tempdir(), oneCore=FALSE, nPasses=100, remZinf=TRUE) {
+  if(is.null(hierarchData)) {
+    hierarchData <- hierarchicalSplit(sigMatrix, geneExpr, oneCore=oneCore, nPasses=nPasses, remZinf=remZinf)
   }
 
   #Step 1: Baseline deconvolution
@@ -30,8 +31,8 @@ heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL,
 
   #Step 2: Build the clustered Deconvolution
   clusters <- NULL
-  for (i in 1:length(heirarchData$allClusters)) {
-    clusters <- rbind(data.frame(cell=heirarchData$allClusters[[i]], clust=i), clusters)
+  for (i in 1:length(hierarchData$allClusters)) {
+    clusters <- rbind(data.frame(cell=hierarchData$allClusters[[i]], clust=i), clusters)
   }
   clustIDs <- clusters$clust
   names(clustIDs) <- clusters$cell
@@ -41,10 +42,10 @@ heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL,
   #Step 3: Split the clusters based on the smaller groups
   curDecon.break.list <- list()
   for (i in as.numeric(rownames(initDecon.clust))) {
-    curCellTypes <- heirarchData$allClusters[[i]]
+    curCellTypes <- hierarchData$allClusters[[i]]
     if(length(curCellTypes) > 1) {
-      #curSigMat <- heirarchData$sigMatList[[i]][,curCellTypes,drop=FALSE]
-      curSigMat <- heirarchData$sigMatList[[i]][,,drop=FALSE]
+      #curSigMat <- hierarchData$sigMatList[[i]][,curCellTypes,drop=FALSE]
+      curSigMat <- hierarchData$sigMatList[[i]][,,drop=FALSE]
       toPred.sub <- toPred[rownames(toPred) %in% rownames(curSigMat),,drop=FALSE]
       colnames(toPred.sub) <- make.names(colnames(toPred.sub), unique=TRUE)
       toPred.sub.imp <- missForest.par(toPred.sub)
@@ -67,7 +68,7 @@ heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL,
   curDecon.new <- do.call(rbind, curDecon.break.list)
   curDecon.new <- rbind(curDecon.new, initDecon['others',,drop=FALSE])
   curDecon.new.rescale <- apply(curDecon.new, 2, function(x){100*x/sum(x)})
-  outFile <- paste('heirarchicalSplit', Sys.Date(),'pdf', sep='.')
+  outFile <- paste('hierarchicalSplit', Sys.Date(),'pdf', sep='.')
   outFile <- file.path(pdfDir, outFile)
   grDevices::pdf(outFile)
   res <- try(pheatmap::pheatmap(t(curDecon.new.rescale), fontsize=6, fontsize_row = 4, cluster_cols=FALSE, cluster_rows = TRUE), silent=TRUE)
@@ -88,6 +89,7 @@ heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL,
 #' @param oneCore Set to TRUE to disable parallelization (DEFAULT: FALSE)
 #' @param nPasses  The maximum number of iterations for spillToConvergence (DEFAULT: 100)
 #' @param deconMatrices  Optional pre-computed results from spillToConvergence (DEFAULT: NULL)
+#' @param remZinf Set to TRUE to remove any ratio with zero or infinity when generating gList (DEFAULT: FALSE)
 #' @export
 #' @return A list of clusters and a list of signature matrices for breaking those clusters
 #' @examples
@@ -96,8 +98,8 @@ heirarchicalClassify <- function(sigMatrix, geneExpr, toPred, heirarchData=NULL,
 #' fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 #' smallLM22 <- fullLM22[1:25,] 
 #' 
-#' clusters <- heirarchicalSplit(sigMatrix=smallLM22, geneExpr=fullLM22, oneCore=TRUE, nPasses=10)
-heirarchicalSplit <- function(sigMatrix, geneExpr, oneCore=FALSE, nPasses=100, deconMatrices=NULL) {
+#' clusters <- hierarchicalSplit(sigMatrix=smallLM22, geneExpr=fullLM22, oneCore=TRUE, nPasses=10)
+hierarchicalSplit <- function(sigMatrix, geneExpr, oneCore=FALSE, nPasses=100, deconMatrices=NULL, remZinf=TRUE) {
   allClusters.rv <- clustWspillOver(sigMatrix, geneExpr, nPasses=nPasses, deconMatrices=deconMatrices)
   allClusters <- allClusters.rv$allClusters
   deconMatrices <- allClusters.rv$deconMatrices
@@ -128,7 +130,7 @@ heirarchicalSplit <- function(sigMatrix, geneExpr, oneCore=FALSE, nPasses=100, d
     }
 
     colnames(curGeneExpr) <- sub('\\.[0-9]+$', '', colnames(curGeneExpr))
-    gList <- rankByT(geneExpr = curGeneExpr, qCut=0.3, oneCore=oneCore)
+    gList <- rankByT(geneExpr = curGeneExpr, qCut=0.3, oneCore=oneCore, remZinf=remZinf)
     if(length(gList) == 1) {
       otherCellType <- allClusters[[i]][!allClusters[[i]] %in% names(gList)]
       gList[[otherCellType]] <- gList[[1]]
