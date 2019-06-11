@@ -8,7 +8,8 @@
   Deconvolution matrices are then built to separate the cell types that formerly could
   not be separated.}
 \usage{
-heirarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100)
+heirarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100,
+  deconMatrices = NULL)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
@@ -18,6 +19,8 @@ heirarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100)
 \item{oneCore}{Set to TRUE to disable parallelization (DEFAULT: FALSE)}
 
 \item{nPasses}{The maximum number of iterations for spillToConvergence (DEFAULT: 100)}
+
+\item{deconMatrices}{Optional pre-computed results from spillToConvergence (DEFAULT: NULL)}
 }
 \value{
 A list of clusters and a list of signature matrices for breaking those clusters

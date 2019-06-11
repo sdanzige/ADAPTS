@@ -213,7 +213,11 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   fullData <- fullData[allGenes,]
   newData <- newData[allGenes,]
 
-  origMatrix.imp <- t(missForest.par(t(origMatrix)))
+  if(any(is.na(origMatrix))) {
+    origMatrix.imp <- t(missForest.par(t(origMatrix)))
+  } else {
+    origMatrix.imp <- origMatrix
+  }
   cNums.new <- kappa(origMatrix.imp)
 
   selGenes <- list()
@@ -241,7 +245,11 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   } #for(gNum in nGenes) {
 
   #Impute the full matrix and back-calculate the kappa
-  impMatrix <- t(missForest.par(t(newMatrix)))
+  if(any(is.na(newMatrix))) {
+    impMatrix <- t(missForest.par(t(newMatrix)))
+  } else {
+    impMatrix <- newMatrix
+  }
   impMatrix[impMatrix > max(origMatrix, na.rm=TRUE)] <- max(origMatrix, na.rm=TRUE)
   impMatrix[impMatrix < min(origMatrix, na.rm=TRUE)] <- min(origMatrix, na.rm=TRUE)
 
@@ -385,7 +393,9 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #'
 #' @param geneExpr  The gene expression data
 #' @param qCut  (DEFAULT: 0.3)
-#' @param oneCore Set to TRUE to disa ble paralellization (DEFAULT: FALSE)
+#' @param oneCore Set to TRUE to disable paralellization (DEFAULT: FALSE)
+#' @param secondPval Set to TRUE to use p-Values as a second sort criteria (DEFAULT: TRUE)
+#' @param remZinf Set to TRUE to remove any ratio with zero or infinity (DEFAULT: FALSE)
 #' @export
 #' @return a list of cell types with data frames ranking genes
 #' @examples
@@ -404,7 +414,7 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #' #  Note in this fake data set, many cell types have exactly one replicate
 #' fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
 #' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
-rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE) {
+rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=FALSE) {
   colnames(geneExpr) <- sub('\\.[0-9]+$', '', colnames(geneExpr)) #Strip any trailing numbers added by make.names()
   cTypes <- unique(colnames(geneExpr))
 
@@ -412,18 +422,30 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE) {
     gList <- foreach (fe_cType = cTypes) %dopar% {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
-      tRes <- lapply(rownames(geneExpr), function(x) {
-        rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=stats::na.omit), silent=TRUE)
+      if (remZinf) {
+        isZ <- rowSums(geneExpr[isType]) == 0
+        notZ <- rowSums(geneExpr[!isType]) == 0
+        remBool <- isZ | notZ
+        geneExpr.cur <- geneExpr[!remBool,]
+      } else {
+        geneExpr.cur <- geneExpr
+      }
+      
+      tRes <- lapply(rownames(geneExpr.cur), function(x) {
+        rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=stats::na.omit), silent=TRUE)
         if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
         return(rv)
       }) #tRes <- mclapply(gNames, function(x) {
 
       geneDF <- do.call(rbind, lapply(tRes, function(x) {data.frame(rat=x$estimate[1]/x$estimate[2], t=x$statistic, pVal=x$p.value)}))
-      rownames(geneDF) <- rownames(geneExpr)
+      rownames(geneDF) <- rownames(geneExpr.cur)
       geneDF$qVal <- stats::p.adjust(geneDF$pVal, method = 'fdr')
 
-      #03-20-18:  This seems wierd to me.  Shouldn't I have used abs(log(geneDF$rat))
-      geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      if(secondPval==TRUE) {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat)), -1*log(geneDF$pVal)),]
+      } else {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      }
       geneDF <- geneDF[geneDF$qVal <= qCut,]
 
       geneDF <- geneDF[!is.na(geneDF$rat), ]
@@ -437,25 +459,38 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE) {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
       
-      if(oneCore==TRUE) {
-        tRes <- lapply(rownames(geneExpr), function(x) {
-          rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
-          if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
-          return(rv)
-        }) #tRes <- mclapply(gNames, function(x) {
+      if (remZinf) {
+        isZ <- rowSums(geneExpr[isType]) == 0
+        notZ <- rowSums(geneExpr[!isType]) == 0
+        remBool <- isZ | notZ
+        geneExpr.cur <- geneExpr[!remBool,]
       } else {
-        tRes <- parallel::mclapply(rownames(geneExpr), function(x) {
-          rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
+        geneExpr.cur <- geneExpr
+      }
+      
+      if(oneCore==TRUE) {
+        tRes <- lapply(rownames(geneExpr.cur), function(x) {
+          rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=na.omit), silent=TRUE)
+          if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
+          return(rv)
+        }) #tRes <- lapply(gNames, function(x) {
+      } else {
+        tRes <- parallel::mclapply(rownames(geneExpr.cur), function(x) {
+          rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=na.omit), silent=TRUE)
           if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
           return(rv)
         }) #tRes <- mclapply(gNames, function(x) {
-      }
+      } #if(oneCore==TRUE) {
         
       geneDF <- do.call(rbind, lapply(tRes, function(x) {data.frame(rat=x$estimate[1]/x$estimate[2], t=x$statistic, pVal=x$p.value)}))
-      rownames(geneDF) <- rownames(geneExpr)
+      rownames(geneDF) <- rownames(geneExpr.cur)
       geneDF$qVal <- stats::p.adjust(geneDF$pVal, method = 'fdr')
 
-      geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      if(secondPval==TRUE) {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat)), -1*log(geneDF$pVal)),]
+      } else {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      }
       geneDF <- geneDF[geneDF$qVal <= qCut,]
 
       geneDF <- geneDF[!is.na(geneDF$rat), ]

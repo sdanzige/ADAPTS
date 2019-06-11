@@ -2,7 +2,7 @@ Package: ADAPTS
 Type: Package
 Title: Automated Deconvolution Augmentation of Profiles for Tissue
         Specific Cells
-Version: 0.9.14
+Version: 0.9.17
 Author: Samuel A Danziger
 Maintainer: Samuel A Danziger <sam.danziger@gmail.com>
 Copyright: Celgene Corporation
@@ -18,7 +18,7 @@ RoxygenNote: 6.1.1
 Depends: R (>= 3.3.0)
 biocViews:
 Imports: missForest, e1071, WGCNA, ComICS, pheatmap, doParallel, quantmod,
-        preprocessCore, pcaMethods, foreach, DeconRNASeq
+        preprocessCore, pcaMethods, foreach, DeconRNASeq, nnls
 Suggests: R.rsp
 VignetteBuilder: R.rsp
 NeedsCompilation: no
