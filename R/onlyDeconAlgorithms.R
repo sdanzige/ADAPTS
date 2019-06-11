@@ -637,7 +637,7 @@ estCellPercent.proportionsInAdmixture <- function(refExpr,  geneExpr, marker_set
 #' 
 #' cellEst <- estCellPercent.nnls(refExpr=smallLM22, geneExpr=fullLM22)
 estCellPercent.nnls <- function(refExpr,  geneExpr) {
-  if(is.null(marker_set)) {marker_set <- data.frame(marker_set=rownames(refExpr))}
+  marker_set <- data.frame(marker_set=rownames(refExpr))
   if(ncol(geneExpr)==1) {geneExpr <- cbind(geneExpr, geneExpr)}
   
   refExprMatrix <- as.matrix(refExpr)

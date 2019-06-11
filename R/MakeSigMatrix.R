@@ -296,7 +296,7 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
     if(sum(!newPartBool)==0) {
       renormNewPart <- preprocessCore::normalize.quantiles(x=as.matrix(sigMatrix[,newPartBool]))
     } else {
-      renormNewPart <- preprocessCore::normalize.quantiles.use.target(x=as.matrix(sigMatrix[,newPartBool]), target=as.vector(sigMatrix[,!newPartBool]))
+      renormNewPart <- preprocessCore::normalize.quantiles.use.target(x=as.matrix(sigMatrix[,newPartBool]), target=as.vector(as.matrix(sigMatrix[,!newPartBool])))
     } #if(sum(!newPartBool)) {
     sigMatrix[,newPartBool] <- renormNewPart
     #message(paste('Post-normalization Kappa:', kappa(sigMatrix)))
