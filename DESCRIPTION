@@ -2,12 +2,16 @@ Package: ADAPTS
 Type: Package
 Title: Automated Deconvolution Augmentation of Profiles for Tissue
         Specific Cells
-Version: 0.9.18
+Version: 0.9.19
 Author: Samuel A Danziger
 Maintainer: Samuel A Danziger <sam.danziger@gmail.com>
 Copyright: Celgene Corporation
 Description: Augments existing or de-novo cell-type signature matrices to deconvolve bulk gene expression data.
-    This package expands on the techniques outlined in Newman AM, Liu CL, Green MR, Gentles AJ, Feng W, Xu Y, 
+    Useful for building signature matrices from single cell RNAseq data, determine cell type deconvolution 
+    spillover, and hierarchical deconvolution to use spillover to increase deconvolution accuracy. Please cite: 
+    Danziger SA et al. (2019) ADAPTS: Automated Deconvolution Augmentation of Profiles for 
+    Tissue Specific cells <doi:10.1098/10.1101/633958>. This package expands on the techniques outlined in Newman AM,
+    Liu CL, Green MR, Gentles AJ, Feng W, Xu Y, 
     Hoang CD, Diehn M, Alizadeh, AA (2015) <doi:10.1038/nmeth.3337>'s Nature Methods paper: 
     'Robust enumeration of cell subsets from tissue expression profiles'  to allow a user to easily add
     their own cell types (e.g. a tumor specific cell type) to Newman's LM22 or other signature matrix. 
