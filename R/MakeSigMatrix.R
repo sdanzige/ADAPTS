@@ -233,7 +233,8 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
     newGenes <- unique(newGenes)
 
     if(all(is.na(newGenes))) { next; }
-
+    newGenes <- newGenes[!is.na(newGenes)]
+    
     augData.new <- cbind(fullData[newGenes,,drop=FALSE], newData[newGenes,,drop=FALSE])
     augData <- apply(augData.new, 1, function(x) {
       tapply(x, colnames(augData.new), stats::median, na.rm=TRUE)
@@ -257,6 +258,7 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   nGenes <- nrow(origMatrix)
   for (i in 1:length(selGenes)) {
     newGenes <- unlist(selGenes[1:i])
+    newGenes <- newGenes[!is.na(newGenes)]
     curMat <- impMatrix[c(rownames(origMatrix), newGenes),]
     cNums <- c(cNums, kappa(curMat))
     nGenes <- c(nGenes, nrow(curMat))
@@ -285,9 +287,9 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   #newGenes <- unique(unlist(selGenes[1:smallMin]))
   newGenes <- unique(unlist(selGenes[1:(smallMin-1)]))
   if(imputeMissing == TRUE) {
-    sigMatrix <- impMatrix[c(rownames(origMatrix), newGenes),]
+    sigMatrix <- impMatrix[rownames(impMatrix) %in% c(rownames(origMatrix), newGenes),]
   } else {
-    sigMatrix <- newMatrix[c(rownames(origMatrix), newGenes),]
+    sigMatrix <- newMatrix[rownames(newMatrix) %in% c(rownames(origMatrix), newGenes),]
   } #if(imputeMissing == TRUE) {
 
   if (postNorm==TRUE) {
@@ -395,7 +397,8 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #' @param qCut  (DEFAULT: 0.3)
 #' @param oneCore Set to TRUE to disable paralellization (DEFAULT: FALSE)
 #' @param secondPval Set to TRUE to use p-Values as a second sort criteria (DEFAULT: TRUE)
-#' @param remZinf Set to TRUE to remove any ratio with zero or infinity (DEFAULT: FALSE)
+#' @param remZinf Set to TRUE to remove any ratio with zero or infinity.  Good for scRNAseq. (DEFAULT: FALSE)
+#' @param reqRatGT1 Set to TRUE to remove any gene with a ratio with less than 1.  Good for scRNAseq. (DEFAULT: FALSE)
 #' @export
 #' @return a list of cell types with data frames ranking genes
 #' @examples
@@ -413,8 +416,8 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #' #Fake source data with replicates for all purified cell types.
 #' #  Note in this fake data set, many cell types have exactly one replicate
 #' fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
-#' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
-rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=FALSE) {
+#' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE, reqRatGT1=FALSE)
+rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=FALSE, reqRatGT1=FALSE) {
   colnames(geneExpr) <- sub('\\.[0-9]+$', '', colnames(geneExpr)) #Strip any trailing numbers added by make.names()
   cTypes <- unique(colnames(geneExpr))
 
@@ -495,6 +498,9 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
 
       geneDF <- geneDF[!is.na(geneDF$rat), ]
       #gList[[cType]] <- geneDF
+      
+      if(reqRatGT1==TRUE) { geneDF <- geneDF[geneDF$rat>1, ,drop=FALSE] }
+      
       return(geneDF)
     }) #for (cType in unique(colnames(geneExpr))) {
     names(gList) <- cTypes
