@@ -425,14 +425,7 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
     gList <- foreach (fe_cType = cTypes) %dopar% {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
-      if (remZinf) {
-        isZ <- rowSums(geneExpr[,isType, drop=FALSE]) == 0
-        notZ <- rowSums(geneExpr[,!isType, drop=FALSE]) == 0
-        remBool <- isZ | notZ
-        geneExpr.cur <- geneExpr[!remBool,]
-      } else {
-        geneExpr.cur <- geneExpr
-      }
+      geneExpr.cur <- geneExpr
       
       tRes <- lapply(rownames(geneExpr.cur), function(x) {
         rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=stats::na.omit), silent=TRUE)
@@ -453,6 +446,14 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
 
       geneDF <- geneDF[!is.na(geneDF$rat), ]
       #gList[[cType]] <- geneDF
+      
+      if(reqRatGT1==TRUE) { geneDF <- geneDF[geneDF$rat>1, ,drop=FALSE] }
+      if (remZinf==TRUE) { 
+        isZ <- geneDF$rat == 0
+        isInf <- is.infinite(geneDF$rat)
+        geneDF <- geneDF[!(isZ | isInf), ,drop=FALSE]
+      }
+      
       return(geneDF)
     } #for (cType in unique(colnames(geneExpr))) {
     names(gList) <- cTypes
@@ -462,14 +463,14 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
       
-      if (remZinf) {
-        isZ <- rowSums(geneExpr[,isType,drop=FALSE]) == 0
-        notZ <- rowSums(geneExpr[,!isType,drop=FALSE]) == 0
-        remBool <- isZ | notZ
-        geneExpr.cur <- geneExpr[!remBool,]
-      } else {
+      #if (remZinf) {
+      #  isZ <- rowSums(geneExpr[,isType,drop=FALSE]) == 0
+      #  notZ <- rowSums(geneExpr[,!isType,drop=FALSE]) == 0
+      #  remBool <- isZ | notZ
+      #  geneExpr.cur <- geneExpr[!remBool,]
+      #} else {
         geneExpr.cur <- geneExpr
-      }
+      #}
       
       if(oneCore==TRUE) {
         tRes <- lapply(rownames(geneExpr.cur), function(x) {
@@ -500,6 +501,11 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
       #gList[[cType]] <- geneDF
       
       if(reqRatGT1==TRUE) { geneDF <- geneDF[geneDF$rat>1, ,drop=FALSE] }
+      if (remZinf==TRUE) { 
+        isZ <- geneDF$rat == 0
+        isInf <- is.infinite(geneDF$rat)
+        geneDF <- geneDF[!(isZ | isInf), ,drop=FALSE]
+      }
       
       return(geneDF)
     }) #for (cType in unique(colnames(geneExpr))) {
