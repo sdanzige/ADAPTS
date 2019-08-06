@@ -276,7 +276,12 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
     mins <- quantmod::findPeaks(-smData2)
     bestMin <- mins[1]
     mVal <- smData[bestMin]
-  } else {
+    if(is.na(mVal)) {
+      message('autoDetectMin failed, reverting to absolute min')
+    }
+  } 
+  if(autoDetectMin == FALSE || is.na(mVal)) {
+    #mVal will be NA if autoDetectMin fails.
     mVal <- min(smData)
     bestMin <- which(smData == mVal)[1]
   }
