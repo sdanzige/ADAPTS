@@ -426,8 +426,8 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
       if (remZinf) {
-        isZ <- rowSums(geneExpr[isType]) == 0
-        notZ <- rowSums(geneExpr[!isType]) == 0
+        isZ <- rowSums(geneExpr[,isType, drop=FALSE]) == 0
+        notZ <- rowSums(geneExpr[,!isType, drop=FALSE]) == 0
         remBool <- isZ | notZ
         geneExpr.cur <- geneExpr[!remBool,]
       } else {
@@ -463,8 +463,8 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=
       isType <- colnames(geneExpr) == fe_cType
       
       if (remZinf) {
-        isZ <- rowSums(geneExpr[isType]) == 0
-        notZ <- rowSums(geneExpr[!isType]) == 0
+        isZ <- rowSums(geneExpr[,isType,drop=FALSE]) == 0
+        notZ <- rowSums(geneExpr[,!isType,drop=FALSE]) == 0
         remBool <- isZ | notZ
         geneExpr.cur <- geneExpr[!remBool,]
       } else {

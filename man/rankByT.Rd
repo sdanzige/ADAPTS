@@ -5,7 +5,7 @@
 \title{Use a t-test to rank to features for each cell type}
 \usage{
 rankByT(geneExpr, qCut = 0.3, oneCore = FALSE, secondPval = TRUE,
-  remZinf = FALSE)
+  remZinf = FALSE, reqRatGT1 = FALSE)
 }
 \arguments{
 \item{geneExpr}{The gene expression data}
@@ -16,7 +16,9 @@ rankByT(geneExpr, qCut = 0.3, oneCore = FALSE, secondPval = TRUE,
 
 \item{secondPval}{Set to TRUE to use p-Values as a second sort criteria (DEFAULT: TRUE)}
 
-\item{remZinf}{Set to TRUE to remove any ratio with zero or infinity (DEFAULT: FALSE)}
+\item{remZinf}{Set to TRUE to remove any ratio with zero or infinity.  Good for scRNAseq. (DEFAULT: FALSE)}
+
+\item{reqRatGT1}{Set to TRUE to remove any gene with a ratio with less than 1.  Good for scRNAseq. (DEFAULT: FALSE)}
 }
 \value{
 a list of cell types with data frames ranking genes
@@ -39,5 +41,5 @@ colnames(exprData) <- c("Mast.cells", "Mast.cells")
 #Fake source data with replicates for all purified cell types.
 #  Note in this fake data set, many cell types have exactly one replicate
 fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
-gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
+gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE, reqRatGT1=FALSE)
 }
