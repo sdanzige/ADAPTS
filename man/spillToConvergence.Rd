@@ -5,7 +5,7 @@
 \title{Build an n-pass spillover matrix, continuing until the results converge into clusters of cell types}
 \usage{
 spillToConvergence(sigMatrix, geneExpr, nPasses = 100, plotIt = FALSE,
-  imputNAs = FALSE)
+  imputNAs = FALSE, method = "DCQ")
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
@@ -17,6 +17,8 @@ spillToConvergence(sigMatrix, geneExpr, nPasses = 100, plotIt = FALSE,
 \item{plotIt}{Set to TRUE to plot it (DEFAULT: FALSE)}
 
 \item{imputNAs}{Set to TRUE to imput genes with missing values & cache the imputed.  FALSE will just remove them (DEFAULT: FALSE)}
+
+\item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture', 'nnls' (DEFAULT: DCQ)}
 }
 \value{
 A list of signature matrices

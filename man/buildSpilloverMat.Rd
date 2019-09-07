@@ -11,7 +11,7 @@ buildSpilloverMat(refExpr, geneExpr, method = "DCQ")
 
 \item{geneExpr}{The full gene expression for purified cell types.  Multiple columns (examples) for each column in the reference expr.}
 
-\item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq' (DEFAULT: DCQ)}
+\item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture', 'nnls' (DEFAULT: DCQ)}
 }
 \value{
 A spillover matrix showing how purified cell types deconvolve
@@ -25,5 +25,5 @@ library(ADAPTS)
 fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 smallLM22 <- fullLM22[1:25,] 
 
-spillover <- buildSpilloverMat(refExpr=smallLM22, geneExpr=fullLM22)
+spillover <- buildSpilloverMat(refExpr=smallLM22, geneExpr=fullLM22, method='DCQ')
 }

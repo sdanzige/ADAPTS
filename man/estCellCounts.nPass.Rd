@@ -4,12 +4,14 @@
 \alias{estCellCounts.nPass}
 \title{Deconvolve with an n-pass spillover matrix}
 \usage{
-estCellCounts.nPass(geneExpr, deconMatrices)
+estCellCounts.nPass(geneExpr, deconMatrices, method = "DCQ")
 }
 \arguments{
 \item{geneExpr}{The gene expression matrix}
 
 \item{deconMatrices}{The results from spillToConvergence()}
+
+\item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture', 'nnls' (DEFAULT: DCQ)}
 }
 \value{
 An estimate of cell counts
@@ -24,5 +26,5 @@ fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 smallLM22 <- fullLM22[1:25,] 
 
 deconMatrices <- spillToConvergence(sigMatrix=smallLM22, geneExpr=fullLM22, nPasses=10)
-cellCounts <- estCellCounts.nPass(geneExpr=fullLM22, deconMatrices=deconMatrices)
+cellCounts <- estCellCounts.nPass(geneExpr=fullLM22, deconMatrices=deconMatrices, method='DCQ')
 }

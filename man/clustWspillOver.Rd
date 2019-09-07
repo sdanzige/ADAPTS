@@ -4,7 +4,8 @@
 \alias{clustWspillOver}
 \title{Build clusters based on n-pass spillover matrix}
 \usage{
-clustWspillOver(sigMatrix, geneExpr, nPasses = 100)
+clustWspillOver(sigMatrix, geneExpr, nPasses = 100,
+  deconMatrices = NULL, method = "DCQ")
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
@@ -12,6 +13,10 @@ clustWspillOver(sigMatrix, geneExpr, nPasses = 100)
 \item{geneExpr}{The source gene expression matrix used to calculate sigMatrix.}
 
 \item{nPasses}{The maximum number of iterations for spillToConvergence (DEFAULT: 100)}
+
+\item{deconMatrices}{Optional pre-computed results from spillToConvergence (DEFAULT: NULL)}
+
+\item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture', 'nnls' (DEFAULT: DCQ)}
 }
 \value{
 Cell types grouped by cluster
