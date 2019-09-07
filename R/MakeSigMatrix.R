@@ -90,7 +90,7 @@ remakeLM22p <- function(exprData, fullLM22, smallLM22=NULL, plotToPDF=TRUE, cond
   }
 
   #Combine additonalMM data and the full LM22 dataset
-  colnames(exprData) <- sub('\\.[0-9]+$', '', colnames(exprData))
+  colnames(exprData) <- sub('.[0-9]+$', '', colnames(exprData))
   cNames <- c(colnames(fullLM22), colnames(exprData))
 
   #Problem 04-19-17 - If I just use the original LM22 data, there's too many NA, I end up adding 950 genes
@@ -102,7 +102,7 @@ remakeLM22p <- function(exprData, fullLM22, smallLM22=NULL, plotToPDF=TRUE, cond
   rNames <- rNames.1[rNames.1 %in% rNames.2]
 
   geneExpr <- cbind(fullLM22[rNames,], as.data.frame(exprData)[rNames,])
-  colnames(geneExpr) <- sub('\\.[0-9]+$', '', colnames(geneExpr))
+  colnames(geneExpr) <- sub('.[0-9]+$', '', colnames(geneExpr))
 
   fName <- paste('gList', paste(rev(unique(colnames(geneExpr))), collapse="_"), 'RData', sep='.')
   if(nchar(fName) > 240) { print('Truncating name list.  File name may not be unique') }
@@ -213,7 +213,16 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   fullData <- fullData[allGenes,]
   newData <- newData[allGenes,]
 
-  origMatrix.imp <- t(missForest.par(t(origMatrix)))
+  if(any(is.na(origMatrix))) {
+    if(imputeMissing == TRUE) {
+      origMatrix.imp <- t(missForest.par(t(origMatrix)))
+    } else {
+      remBool <- apply(origMatrix, 1, function(x){any(is.na(x))})
+      origMatrix.imp <- origMatrix[!remBool,]
+    }
+  } else {
+    origMatrix.imp <- origMatrix
+  }
   cNums.new <- kappa(origMatrix.imp)
 
   selGenes <- list()
@@ -229,7 +238,8 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
     newGenes <- unique(newGenes)
 
     if(all(is.na(newGenes))) { next; }
-
+    newGenes <- newGenes[!is.na(newGenes)]
+    
     augData.new <- cbind(fullData[newGenes,,drop=FALSE], newData[newGenes,,drop=FALSE])
     augData <- apply(augData.new, 1, function(x) {
       tapply(x, colnames(augData.new), stats::median, na.rm=TRUE)
@@ -241,7 +251,17 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   } #for(gNum in nGenes) {
 
   #Impute the full matrix and back-calculate the kappa
-  impMatrix <- t(missForest.par(t(newMatrix)))
+  if(any(is.na(newMatrix))) {
+    if(imputeMissing == TRUE) {
+      impMatrix <- t(missForest.par(t(newMatrix)))
+    } else {
+      remBool <- apply(newMatrix, 1, function(x){any(is.na(x))})
+      impMatrix <- newMatrix[!remBool,]
+    }
+    
+  } else {
+    impMatrix <- newMatrix
+  }
   impMatrix[impMatrix > max(origMatrix, na.rm=TRUE)] <- max(origMatrix, na.rm=TRUE)
   impMatrix[impMatrix < min(origMatrix, na.rm=TRUE)] <- min(origMatrix, na.rm=TRUE)
 
@@ -249,7 +269,9 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   nGenes <- nrow(origMatrix)
   for (i in 1:length(selGenes)) {
     newGenes <- unlist(selGenes[1:i])
-    curMat <- impMatrix[c(rownames(origMatrix), newGenes),]
+    newGenes <- newGenes[!is.na(newGenes)]
+    curMatGenes <- c(rownames(origMatrix), newGenes)
+    curMat <- impMatrix[curMatGenes[curMatGenes %in% rownames(impMatrix)],]
     cNums <- c(cNums, kappa(curMat))
     nGenes <- c(nGenes, nrow(curMat))
   }
@@ -266,7 +288,12 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
     mins <- quantmod::findPeaks(-smData2)
     bestMin <- mins[1]
     mVal <- smData[bestMin]
-  } else {
+    if(is.na(mVal)) {
+      message('autoDetectMin failed, reverting to absolute min')
+    }
+  } 
+  if(autoDetectMin == FALSE || is.na(mVal)) {
+    #mVal will be NA if autoDetectMin fails.
     mVal <- min(smData)
     bestMin <- which(smData == mVal)[1]
   }
@@ -277,9 +304,10 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   #newGenes <- unique(unlist(selGenes[1:smallMin]))
   newGenes <- unique(unlist(selGenes[1:(smallMin-1)]))
   if(imputeMissing == TRUE) {
-    sigMatrix <- impMatrix[c(rownames(origMatrix), newGenes),]
+    sigMatrix <- impMatrix[rownames(impMatrix) %in% c(rownames(origMatrix), newGenes),]
   } else {
-    sigMatrix <- newMatrix[c(rownames(origMatrix), newGenes),]
+    sigMatrix <- newMatrix[rownames(newMatrix) %in% c(rownames(origMatrix), newGenes),]
+    sigMatrix <- sigMatrix[apply(sigMatrix, 1, function(x){!any(is.na(x))}),]
   } #if(imputeMissing == TRUE) {
 
   if (postNorm==TRUE) {
@@ -288,7 +316,7 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
     if(sum(!newPartBool)==0) {
       renormNewPart <- preprocessCore::normalize.quantiles(x=as.matrix(sigMatrix[,newPartBool]))
     } else {
-      renormNewPart <- preprocessCore::normalize.quantiles.use.target(x=as.matrix(sigMatrix[,newPartBool]), target=as.vector(sigMatrix[,!newPartBool]))
+      renormNewPart <- preprocessCore::normalize.quantiles.use.target(x=as.matrix(sigMatrix[,newPartBool]), target=as.vector(as.matrix(sigMatrix[,!newPartBool])))
     } #if(sum(!newPartBool)) {
     sigMatrix[,newPartBool] <- renormNewPart
     #message(paste('Post-normalization Kappa:', kappa(sigMatrix)))
@@ -301,9 +329,9 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
   if(plotToPDF == TRUE) {
     pdfFile <- paste('AugmentSigMatrix', condTol, Sys.Date(), 'pdf', sep='.')
     pdfFile <- file.path(pdfDir, pdfFile)
-    if(!is.null(addTitle)) { pdfFile <- sub('\\.pdf$', paste0('.', addTitle, '.pdf'), pdfFile) }
-    if(imputeMissing) { pdfFile <- sub('\\.pdf', '.impute.pdf', pdfFile) }
-    if(postNorm) { pdfFile <- sub('\\.pdf', '.postNorm.pdf', pdfFile) }
+    if(!is.null(addTitle)) { pdfFile <- sub('.pdf$', paste0('.', addTitle, '.pdf'), pdfFile) }
+    if(imputeMissing) { pdfFile <- sub('.pdf', '.impute.pdf', pdfFile) }
+    if(postNorm) { pdfFile <- sub('.pdf', '.postNorm.pdf', pdfFile) }
     grDevices::pdf(pdfFile)
   }
 
@@ -385,7 +413,10 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #'
 #' @param geneExpr  The gene expression data
 #' @param qCut  (DEFAULT: 0.3)
-#' @param oneCore Set to TRUE to disa ble paralellization (DEFAULT: FALSE)
+#' @param oneCore Set to TRUE to disable paralellization (DEFAULT: FALSE)
+#' @param secondPval Set to TRUE to use p-Values as a second sort criteria (DEFAULT: TRUE)
+#' @param remZinf Set to TRUE to remove any ratio with zero or infinity.  Good for scRNAseq. (DEFAULT: FALSE)
+#' @param reqRatGT1 Set to TRUE to remove any gene with a ratio with less than 1.  Good for scRNAseq. (DEFAULT: FALSE)
 #' @export
 #' @return a list of cell types with data frames ranking genes
 #' @examples
@@ -403,31 +434,44 @@ AugmentSigMatrix <- function(origMatrix, fullData, newData, gList, nGenes=1:100,
 #' #Fake source data with replicates for all purified cell types.
 #' #  Note in this fake data set, many cell types have exactly one replicate
 #' fakeAllData <- cbind(fullLM22, as.data.frame(exprData)) 
-#' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE)
-rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE) {
-  colnames(geneExpr) <- sub('\\.[0-9]+$', '', colnames(geneExpr)) #Strip any trailing numbers added by make.names()
+#' gList <- rankByT(geneExpr = fakeAllData, qCut=0.3, oneCore=TRUE, reqRatGT1=FALSE)
+rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE, secondPval=TRUE, remZinf=FALSE, reqRatGT1=FALSE) {
+  colnames(geneExpr) <- sub(".[0-9]+$", '', colnames(geneExpr)) #Strip any trailing numbers added by make.names()
   cTypes <- unique(colnames(geneExpr))
 
   if(length(cTypes) > 2 & oneCore==FALSE) {
     gList <- foreach (fe_cType = cTypes) %dopar% {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
-      tRes <- lapply(rownames(geneExpr), function(x) {
-        rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=stats::na.omit), silent=TRUE)
+      geneExpr.cur <- geneExpr
+      
+      tRes <- lapply(rownames(geneExpr.cur), function(x) {
+        rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=stats::na.omit), silent=TRUE)
         if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
         return(rv)
       }) #tRes <- mclapply(gNames, function(x) {
 
       geneDF <- do.call(rbind, lapply(tRes, function(x) {data.frame(rat=x$estimate[1]/x$estimate[2], t=x$statistic, pVal=x$p.value)}))
-      rownames(geneDF) <- rownames(geneExpr)
+      rownames(geneDF) <- rownames(geneExpr.cur)
       geneDF$qVal <- stats::p.adjust(geneDF$pVal, method = 'fdr')
 
-      #03-20-18:  This seems wierd to me.  Shouldn't I have used abs(log(geneDF$rat))
-      geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      if(secondPval==TRUE) {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat)), -1*log(geneDF$pVal)),]
+      } else {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      }
       geneDF <- geneDF[geneDF$qVal <= qCut,]
 
       geneDF <- geneDF[!is.na(geneDF$rat), ]
       #gList[[cType]] <- geneDF
+      
+      if(reqRatGT1==TRUE) { geneDF <- geneDF[geneDF$rat>1, ,drop=FALSE] }
+      if (remZinf==TRUE) { 
+        isZ <- geneDF$rat == 0
+        isInf <- is.infinite(geneDF$rat)
+        geneDF <- geneDF[!(isZ | isInf), ,drop=FALSE]
+      }
+      
       return(geneDF)
     } #for (cType in unique(colnames(geneExpr))) {
     names(gList) <- cTypes
@@ -437,29 +481,50 @@ rankByT <- function(geneExpr, qCut=0.3, oneCore=FALSE) {
       print(fe_cType)
       isType <- colnames(geneExpr) == fe_cType
       
+      #if (remZinf) {
+      #  isZ <- rowSums(geneExpr[,isType,drop=FALSE]) == 0
+      #  notZ <- rowSums(geneExpr[,!isType,drop=FALSE]) == 0
+      #  remBool <- isZ | notZ
+      #  geneExpr.cur <- geneExpr[!remBool,]
+      #} else {
+        geneExpr.cur <- geneExpr
+      #}
+      
       if(oneCore==TRUE) {
-        tRes <- lapply(rownames(geneExpr), function(x) {
-          rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
+        tRes <- lapply(rownames(geneExpr.cur), function(x) {
+          rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=na.omit), silent=TRUE)
           if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
           return(rv)
-        }) #tRes <- mclapply(gNames, function(x) {
+        }) #tRes <- lapply(gNames, function(x) {
       } else {
-        tRes <- parallel::mclapply(rownames(geneExpr), function(x) {
-          rv <- try(stats::t.test(geneExpr[x,isType], geneExpr[x,!isType], na.action=na.omit), silent=TRUE)
+        tRes <- parallel::mclapply(rownames(geneExpr.cur), function(x) {
+          rv <- try(stats::t.test(geneExpr.cur[x,isType], geneExpr.cur[x,!isType], na.action=na.omit), silent=TRUE)
           if(inherits(rv, 'try-error')) {rv <- list(estimate=c(1,1), statistic=0, p.value=1)}
           return(rv)
         }) #tRes <- mclapply(gNames, function(x) {
-      }
+      } #if(oneCore==TRUE) {
         
       geneDF <- do.call(rbind, lapply(tRes, function(x) {data.frame(rat=x$estimate[1]/x$estimate[2], t=x$statistic, pVal=x$p.value)}))
-      rownames(geneDF) <- rownames(geneExpr)
+      rownames(geneDF) <- rownames(geneExpr.cur)
       geneDF$qVal <- stats::p.adjust(geneDF$pVal, method = 'fdr')
 
-      geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      if(secondPval==TRUE) {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat)), -1*log(geneDF$pVal)),]
+      } else {
+        geneDF <- geneDF[order(abs(log2(geneDF$rat))),]
+      }
       geneDF <- geneDF[geneDF$qVal <= qCut,]
 
       geneDF <- geneDF[!is.na(geneDF$rat), ]
       #gList[[cType]] <- geneDF
+      
+      if(reqRatGT1==TRUE) { geneDF <- geneDF[geneDF$rat>1, ,drop=FALSE] }
+      if (remZinf==TRUE) { 
+        isZ <- geneDF$rat == 0
+        isInf <- is.infinite(geneDF$rat)
+        geneDF <- geneDF[!(isZ | isInf), ,drop=FALSE]
+      }
+      
       return(geneDF)
     }) #for (cType in unique(colnames(geneExpr))) {
     names(gList) <- cTypes
