@@ -2,8 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{remakeLM22p}
 \alias{remakeLM22p}
-\title{Use the full LM22 data matrix and add a few additional genes to cover osteoblasts, osteoclasts,
-Plasma.memory, MM.  In many ways this is just a convenient wrapper for AugmentSigMatrix}
+\title{Make an Augmented Signature Matrix}
 \usage{
 remakeLM22p(exprData, fullLM22, smallLM22 = NULL, plotToPDF = TRUE,
   condTol = 1.01, postNorm = TRUE, autoDetectMin = FALSE,
@@ -32,8 +31,9 @@ remakeLM22p(exprData, fullLM22, smallLM22 = NULL, plotToPDF = TRUE,
 a cell type signature matrix
 }
 \description{
-Use the full LM22 data matrix and add a few additional genes to cover osteoblasts, osteoclasts,
-Plasma.memory, MM.  In many ways this is just a convenient wrapper for AugmentSigMatrix
+With the ADAPTSdata packge, it will use the full LM22 data matrix and add a few 
+additional genes to cover osteoblasts, osteoclasts, Plasma.memory, MM.  In many ways this is 
+just a convenient wrapper for AugmentSigMatrix that calculates and caches a gList.
 }
 \examples{
 #This toy example treats the LM22 deconvolution matrix as if it were all of the data

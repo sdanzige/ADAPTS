@@ -2,8 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{collapseCellTypes}
 \alias{collapseCellTypes}
-\title{Collapse the cell types (in rows) to super-classes
-#Updated 09-06-18 to include MGSM36 cell types}
+\title{Collapse cell yypes}
 \usage{
 collapseCellTypes(cellCounts, method = "Pheno4")
 }
@@ -25,7 +24,7 @@ a cell estimate matrix with the names changed
 }
 \description{
 Collapse the cell types (in rows) to super-classes
-#Updated 09-06-18 to include MGSM36 cell types
+Including MGSM36 cell types
 }
 \examples{
 #This toy example 

@@ -2,11 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent.DeconRNASeq}
 \alias{estCellPercent.DeconRNASeq}
-\title{Use DeconRNASeq to estimate the cell count percentage
-Performs with similar effectiveness as DCQ, but identifies different proportions of cell-types
-Requires installation of package 'DeconRNASeq':
-   source("https://bioconductor.org/biocLite.R")
-   biocLite("DeconRNASeq")}
+\title{DeconRNASeq deconvolution}
 \usage{
 estCellPercent.DeconRNASeq(refExpr, geneExpr, marker_set = NULL)
 }
@@ -21,9 +17,14 @@ estCellPercent.DeconRNASeq(refExpr, geneExpr, marker_set = NULL)
 A matrix with cell type estimates for each samples
 }
 \description{
-<joseph.szustakowski@novartis.com> TGJDS (2013). DeconRNASeq: Deconvolution of Heterogeneous Tissue Samples for mRNA-Seq data. R package version 1.18.0.
-}
-\details{
+Use DeconRNASeq to estimate the cell count percentage
+Performs with similar effectiveness as DCQ, but identifies different proportions of cell-types
+Requires installation of package 'DeconRNASeq':
+   source("https://bioconductor.org/biocLite.R")
+   biocLite("DeconRNASeq")
+
+   <joseph.szustakowski@novartis.com> TGJDS (2013). DeconRNASeq: Deconvolution of Heterogeneous Tissue Samples for mRNA-Seq data. R package version 1.18.0.
+
 cellEst <- estCellPercent.DeconRNASeq(refExpr,  geneExpr, marker_set=NULL)
 }
 \examples{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{spillToConvergence}
 \alias{spillToConvergence}
-\title{Build an n-pass spillover matrix, continuing until the results converge into clusters of cell types}
+\title{Spillover to convergence}
 \usage{
 spillToConvergence(sigMatrix, geneExpr, nPasses = 100, plotIt = FALSE,
   imputNAs = FALSE, method = "DCQ")
@@ -24,6 +24,8 @@ spillToConvergence(sigMatrix, geneExpr, nPasses = 100, plotIt = FALSE,
 A list of signature matrices
 }
 \description{
+Build an n-pass spillover matrix, continuing until the results converge into clusters of cell types
+
 deconMatrices <- spillToConvergence(sigMatrix, geneExpr, 100, FALSE, TRUE)
 }
 \examples{

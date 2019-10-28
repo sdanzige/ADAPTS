@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{hierarchicalClassify}
 \alias{hierarchicalClassify}
-\title{Build clusters based on n-pass spillover matrix}
+\title{Hierarchical Deconvolution}
 \usage{
 hierarchicalClassify(sigMatrix, geneExpr, toPred, hierarchData = NULL,
   pdfDir = tempdir(), oneCore = FALSE, nPasses = 100,
@@ -31,7 +31,7 @@ hierarchicalClassify(sigMatrix, geneExpr, toPred, hierarchData = NULL,
 a matrix of cell counts
 }
 \description{
-Build clusters based on n-pass spillover matrix
+Deconvolve cell types based on clusters detected by an n-pass spillover matrix
 }
 \examples{
 #This toy example 

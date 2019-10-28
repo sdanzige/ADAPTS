@@ -2,7 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{getLM22cells}
 \alias{getLM22cells}
-\title{Load a map of cell type names}
+\title{LM22 look up table}
 \usage{
 getLM22cells()
 }

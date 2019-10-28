@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{clustWspillOver}
 \alias{clustWspillOver}
-\title{Build clusters based on n-pass spillover matrix}
+\title{Cluster with spillover}
 \usage{
 clustWspillOver(sigMatrix, geneExpr, nPasses = 100,
   deconMatrices = NULL, method = "DCQ")

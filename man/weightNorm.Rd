@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{weightNorm}
 \alias{weightNorm}
-\title{Use weightNorm to normalize the SVM weights.  Used for SVMDECONV}
+\title{SVMDECONV helper function}
 \usage{
 weightNorm(w)
 }
@@ -13,5 +13,7 @@ weightNorm(w)
 a weight vector
 }
 \description{
+Use weightNorm to normalize the SVM weights.  Used for SVMDECONV
+
 w1 <- weightNorm(w)
 }

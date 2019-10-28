@@ -2,7 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{rankByT}
 \alias{rankByT}
-\title{Use a t-test to rank to features for each cell type}
+\title{Rank genes for each cell type}
 \usage{
 rankByT(geneExpr, qCut = 0.3, oneCore = FALSE, secondPval = TRUE,
   remZinf = FALSE, reqRatGT1 = FALSE)
@@ -24,6 +24,8 @@ rankByT(geneExpr, qCut = 0.3, oneCore = FALSE, secondPval = TRUE,
 a list of cell types with data frames ranking genes
 }
 \description{
+Use a t-test to rank to features for each cell type
+
 gList <- rankByT(geneExpr, qCut=0.3)
 }
 \examples{

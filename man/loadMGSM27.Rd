@@ -2,7 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{loadMGSM27}
 \alias{loadMGSM27}
-\title{Load the MGSM27 signature matrix}
+\title{Load MGSM27}
 \usage{
 loadMGSM27()
 }

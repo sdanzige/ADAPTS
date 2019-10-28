@@ -2,11 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{AugmentSigMatrix}
 \alias{AugmentSigMatrix}
-\title{Build an augmented signature matrix from an initial signature matrix, source data, and a list of differentially expressed genes (gList)
- The user might want to modify gList to make certain that particular genes are included in the matrix
- The algorithm will be to add one additional gene from each new cell type
- Record the condition number, and plot those.
- Will only consider adding rows shared by fullData and newData}
+\title{Make an augmented signature matrix}
 \usage{
 AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
   plotToPDF = TRUE, imputeMissing = TRUE, condTol = 1.01,
@@ -46,7 +42,12 @@ AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
 an augmented cell type signature matrix
 }
 \description{
-newMatData <- AugmentSigMatrix(origMatrix, fullData, newData)
+Build an augmented signature matrix from an initial signature matrix, source data, and a list of 
+differentially expressed genes (gList).  The user might want to modify gList to make certain that particular 
+genes are included in the matrix.  The algorithm will be to add one additional gene from each new cell type
+Record the condition number, and plot those.  Will only consider adding rows shared by fullData and newData
+
+ newMatData <- AugmentSigMatrix(origMatrix, fullData, newData, gList)
 }
 \examples{
 #This toy example treats the LM22 deconvolution matrix as if it were all of the data

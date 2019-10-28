@@ -2,9 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{missForest.par}
 \alias{missForest.par}
-\title{Use parallel missForest to impute missing values.
-  This wrapper is required because missForest crashed if you have more cores than variables.
-  This will default to no parellelization for Windows}
+\title{Use parallel missForest to impute missing values.}
 \usage{
 missForest.par(dataMat, parallelize = "variables")
 }
@@ -17,7 +15,10 @@ missForest.par(dataMat, parallelize = "variables")
 a matrix including imputed values
 }
 \description{
-newMatrix <- missForest.par(dataMat)
+This wrapper is helpful because missForest crashes if you have more cores than variables.
+  This will default to no parellelization for Windows
+
+  newMatrix <- missForest.par(dataMat)
 }
 \examples{
 library(ADAPTS)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{buildSpilloverMat}
 \alias{buildSpilloverMat}
-\title{Build a spillover matrix, i.e. what do purified samples deconvolve as?}
+\title{Build a spillover matrix}
 \usage{
 buildSpilloverMat(refExpr, geneExpr, method = "DCQ")
 }
@@ -17,6 +17,8 @@ buildSpilloverMat(refExpr, geneExpr, method = "DCQ")
 A spillover matrix showing how purified cell types deconvolve
 }
 \description{
+Build a spillover matrix, i.e. what do purified samples deconvolve as?
+
 spillExpr <- buildSpilloverMat(refExpr, geneExpr, method='DCQ')
 }
 \examples{

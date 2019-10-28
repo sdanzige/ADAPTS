@@ -2,8 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent.svmdecon}
 \alias{estCellPercent.svmdecon}
-\title{Use SVMDECON to estimate the cell count percentage
-Performs considerably worse in deconvolution than DCQ}
+\title{SVMDECON deconvolution}
 \usage{
 estCellPercent.svmdecon(refExpr, geneExpr, marker_set = NULL,
   useOldVersion = F, progressBar = T)
@@ -29,5 +28,8 @@ smallLM22 <- fullLM22[1:25,]
 cellEst <- estCellPercent.svmdecon(refExpr=smallLM22, geneExpr=fullLM22)
 }
 \description{
+Use SVMDECON to estimate the cell count percentage
+Performs considerably worse in deconvolution than DCQ
+
 cellEst <- estCellPercent.svmdecon(refExpr,  geneExpr)
 }

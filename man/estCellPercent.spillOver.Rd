@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent.spillOver}
 \alias{estCellPercent.spillOver}
-\title{Use a spillover matrix to deconvolve a samples}
+\title{Estimate cell percentage from spillover}
 \usage{
 estCellPercent.spillOver(spillExpr, refExpr, geneExpr, method = "DCQ",
   ...)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/MakeSigMatrix.R
 \name{loadModMap}
 \alias{loadModMap}
-\title{Load the LM22 xCell map}
+\title{LM22 to xCell LUT}
 \usage{
 loadModMap()
 }

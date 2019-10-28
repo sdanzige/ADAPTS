@@ -2,8 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent.proportionsInAdmixture}
 \alias{estCellPercent.proportionsInAdmixture}
-\title{Use R function proportionsInAdmixture to estimate the cell count percentage
-Uses the 'WGCNA' package}
+\title{WGCNA::proportionsInAdmixture deconvolution}
 \usage{
 estCellPercent.proportionsInAdmixture(refExpr, geneExpr,
   marker_set = NULL)
@@ -19,6 +18,9 @@ estCellPercent.proportionsInAdmixture(refExpr, geneExpr,
 A matrix with cell type estimates for each samples
 }
 \description{
+Use R function proportionsInAdmixture to estimate the cell count percentage
+Uses the 'WGCNA' package
+
 cellEst <- estCellPercent.proportionsInAdmixture(refExpr)
 }
 \examples{

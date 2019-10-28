@@ -2,11 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{hierarchicalSplit}
 \alias{hierarchicalSplit}
-\title{Attempt to deconvolve cell types by building a heriarchy of cell types using
-  spillToConvergence to determine cell types that are not signficantly different.
-  First deconvolve those clusters of cell types.
-  Deconvolution matrices are then built to separate the cell types that formerly could
-  not be separated.}
+\title{Build hierarchical cell clusters.}
 \usage{
 hierarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100,
   deconMatrices = NULL, remZinf = TRUE, method = "DCQ")
@@ -30,7 +26,7 @@ hierarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100,
 A list of clusters and a list of signature matrices for breaking those clusters
 }
 \description{
-Attempt to deconvolve cell types by building a heriarchy of cell types using
+Attempt to deconvolve cell types by building a hierarchy of cell types using
   spillToConvergence to determine cell types that are not signficantly different.
   First deconvolve those clusters of cell types.
   Deconvolution matrices are then built to separate the cell types that formerly could

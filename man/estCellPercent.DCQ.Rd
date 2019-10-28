@@ -2,9 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent.DCQ}
 \alias{estCellPercent.DCQ}
-\title{Use DCQ to estimate the cell count percentage
-Requires installation of package 'ComICS'
-  To Do: Also report the standard deviation as a confidence metric}
+\title{DCQ Deconvolution}
 \usage{
 estCellPercent.DCQ(refExpr, geneExpr, marker_set = NULL,
   number_of_repeats = 10, alpha = 0.05, lambda = 0.2)

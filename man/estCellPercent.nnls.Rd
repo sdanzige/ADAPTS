@@ -2,9 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent.nnls}
 \alias{estCellPercent.nnls}
-\title{Use non-negative least squares regression to deconvolve a sample
-    This is going to be to simple to be useful
-    This might be more interesting if I used non-positive least squares to detect 'other'}
+\title{Non-negative least squares deconvolution}
 \usage{
 estCellPercent.nnls(refExpr, geneExpr)
 }

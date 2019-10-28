@@ -1,4 +1,5 @@
-#' Build clusters based on n-pass spillover matrix
+#' Hierarchical Deconvolution
+#' @description Deconvolve cell types based on clusters detected by an n-pass spillover matrix
 #'
 #' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
 #' @param geneExpr  The source gene expression matrix used to calculate sigMatrix
@@ -80,7 +81,8 @@ hierarchicalClassify <- function(sigMatrix, geneExpr, toPred, hierarchData=NULL,
   return(curDecon.new.rescale)
 }
 
-#' Attempt to deconvolve cell types by building a heriarchy of cell types using
+#' Build hierarchical cell clusters.
+#' @description Attempt to deconvolve cell types by building a hierarchy of cell types using
 #'   spillToConvergence to determine cell types that are not signficantly different.
 #'   First deconvolve those clusters of cell types.
 #'   Deconvolution matrices are then built to separate the cell types that formerly could
@@ -155,7 +157,8 @@ hierarchicalSplit <- function(sigMatrix, geneExpr, oneCore=FALSE, nPasses=100, d
   return(list(allClusters=allClusters, sigMatList=sigMatList, deconMatrices=deconMatrices))
 }
 
-#' Build clusters based on n-pass spillover matrix
+#' Cluster with spillover
+#' @description Build clusters based on n-pass spillover matrix
 #'
 #' @param sigMatrix  The deconvolution matrix, e.g. LM22 or MGSM27
 #' @param geneExpr  The source gene expression matrix used to calculate sigMatrix.
@@ -205,8 +208,7 @@ clustWspillOver <- function(sigMatrix, geneExpr, nPasses=100, deconMatrices=NULL
 }
 
 #' Deconvolve with an n-pass spillover matrix
-#'
-#' curExpr <- estCellCounts.nPass(sigMatrix, deconMatrices)
+#' @description curExpr <- estCellCounts.nPass(sigMatrix, deconMatrices)
 #'
 #' @param geneExpr  The gene expression matrix
 #' @param deconMatrices  The results from spillToConvergence()
@@ -229,7 +231,8 @@ estCellCounts.nPass <- function(geneExpr, deconMatrices, method='DCQ') {
   return(curExpr)
 }
 
-#' Build an n-pass spillover matrix, continuing until the results converge into clusters of cell types
+#' Spillover to convergence
+#' @description Build an n-pass spillover matrix, continuing until the results converge into clusters of cell types
 #'
 #' deconMatrices <- spillToConvergence(sigMatrix, geneExpr, 100, FALSE, TRUE)
 #'
@@ -350,7 +353,8 @@ spillToConvergence <- function(sigMatrix, geneExpr, nPasses=100, plotIt=FALSE, i
 }
 
 
-#' Build a spillover matrix, i.e. what do purified samples deconvolve as?
+#' Build a spillover matrix
+#' @description Build a spillover matrix, i.e. what do purified samples deconvolve as?
 #'
 #' spillExpr <- buildSpilloverMat(refExpr, geneExpr, method='DCQ')
 #'
@@ -390,7 +394,8 @@ buildSpilloverMat <- function(refExpr, geneExpr, method='DCQ') {
   return(res)
 }
 
-#' Use a spillover matrix to deconvolve a samples
+#' Estimate cell percentage from spillover
+#' @description Use a spillover matrix to deconvolve a samples
 #'
 #' @param spillExpr  A spill over matrix, as calculated by buildSpilloverMat(). (e.g. LM22.spillover.csv.gz)
 #' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
@@ -426,7 +431,8 @@ estCellPercent.spillOver <- function(spillExpr, refExpr,  geneExpr, method='DCQ'
   return(cellEst2)
 }
 
-#' Use DCQ to estimate the cell count percentage
+#' DCQ Deconvolution
+#' @description Use DCQ to estimate the cell count percentage
 #' Requires installation of package 'ComICS'
 #'   To Do: Also report the standard deviation as a confidence metric
 #'
@@ -484,7 +490,8 @@ estCellPercent.DCQ <- function(refExpr,  geneExpr, marker_set=NULL, number_of_re
   return (cellCountsPercent)
 }
 
-#' Use SVMDECON to estimate the cell count percentage
+#' SVMDECON deconvolution
+#' @description Use SVMDECON to estimate the cell count percentage
 #' Performs considerably worse in deconvolution than DCQ
 #'
 #' cellEst <- estCellPercent.svmdecon(refExpr,  geneExpr)
@@ -534,7 +541,8 @@ estCellPercent.svmdecon <- function(refExpr,  geneExpr, marker_set=NULL, useOldV
   return(cellCountsPercent)
 }
 
-#' Use DeconRNASeq to estimate the cell count percentage
+#' DeconRNASeq deconvolution
+#' @description Use DeconRNASeq to estimate the cell count percentage
 #' Performs with similar effectiveness as DCQ, but identifies different proportions of cell-types
 #' Requires installation of package 'DeconRNASeq':
 #'    source("https://bioconductor.org/biocLite.R")
@@ -578,7 +586,8 @@ estCellPercent.DeconRNASeq <- function(refExpr,  geneExpr, marker_set=NULL) {
   return (cellCountsPercent)
 }
 
-#' Use R function proportionsInAdmixture to estimate the cell count percentage
+#' WGCNA::proportionsInAdmixture deconvolution
+#' @description Use R function proportionsInAdmixture to estimate the cell count percentage
 #' Uses the 'WGCNA' package
 #'
 #' cellEst <- estCellPercent.proportionsInAdmixture(refExpr)
@@ -625,7 +634,8 @@ estCellPercent.proportionsInAdmixture <- function(refExpr,  geneExpr, marker_set
   return (cellCountsPercent)
 }
 
-#' Use non-negative least squares regression to deconvolve a sample
+#' Non-negative least squares deconvolution
+#' @description Use non-negative least squares regression to deconvolve a sample
 #'     This is going to be to simple to be useful
 #'     This might be more interesting if I used non-positive least squares to detect 'other'
 #'
@@ -670,7 +680,8 @@ estCellPercent.nnls <- function(refExpr,  geneExpr) {
   return(cellCountsPercent)
 }
 
-#' Use weightNorm to normalize the SVM weights.  Used for SVMDECONV
+#' SVMDECONV helper function
+#' @description Use weightNorm to normalize the SVM weights.  Used for SVMDECONV
 #'
 #' w1 <- weightNorm(w)
 #'
@@ -682,7 +693,8 @@ weightNorm <- function(w) {
 }
 
 
-#' Use SVMDECONV to estimate the cell count percentage
+#' Support vector machine deconvolution
+#' @description Use SVMDECONV to estimate the cell count percentage
 #' David L Gibbs, dgibbs@systemsbiology.org
 #' June 9, 2017
 #'
@@ -719,8 +731,9 @@ SVMDECON <- function(m,B) {
 }
 
 
-#' Collapse the cell types (in rows) to super-classes
-#' #Updated 09-06-18 to include MGSM36 cell types
+#' Collapse cell yypes
+#' @description Collapse the cell types (in rows) to super-classes
+#' Including MGSM36 cell types
 #'
 #' @param cellCounts A matrix with cell counts
 #' @param method The method for combining cell types ('Default: 'Pheno2')
@@ -901,7 +914,8 @@ collapseCellTypes <- function(cellCounts, method='Pheno4') {
 
   return(countMatrix.comT)
 }
-#' A wrapper function to call any of the estCellPercent functions
+#' Wrapper for deconvolution methods
+#' @description A wrapper function to call any of the estCellPercent functions
 #'
 #' @param refExpr  a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.
 #' @param geneExpr  a data frame representing RNA-seq or microarray gene-expression profiles of a given complex tissue. Each row represents an expression of a gene, and each column represents a different experimental sample. colnames contain the name of each sample and rownames includes the genes' symbol. The name of each individual sample and the symbol of each gene should be unique. Any gene with missing expression values should be excluded.

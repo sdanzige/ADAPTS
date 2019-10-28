@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{estCellPercent}
 \alias{estCellPercent}
-\title{A wrapper function to call any of the estCellPercent functions}
+\title{Wrapper for deconvolution methods}
 \usage{
 estCellPercent(refExpr, geneExpr, method = "DCQ", ...)
 }

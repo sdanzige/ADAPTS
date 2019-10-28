@@ -2,9 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{SVMDECON}
 \alias{SVMDECON}
-\title{Use SVMDECONV to estimate the cell count percentage
-David L Gibbs, dgibbs@systemsbiology.org
-June 9, 2017}
+\title{Support vector machine deconvolution}
 \usage{
 SVMDECON(m, B)
 }
@@ -17,12 +15,15 @@ SVMDECON(m, B)
 A matrix with cell type estimates for each samples
 }
 \description{
+Use SVMDECONV to estimate the cell count percentage
+David L Gibbs, dgibbs@systemsbiology.org
+June 9, 2017
+
 v-SVR is applied with a linear kernel to solve for f,
 and the best result from three values of v = {0.25, 0.5, 0.75}
 is saved, where ‘best’ is defined as the lowest root mean squared error
 between m and the deconvolution result, f x B.
-}
-\details{
+
 Our current implementation executes v-SVR using the
 ‘svm’ function in the R package, ‘e1071’.
 
