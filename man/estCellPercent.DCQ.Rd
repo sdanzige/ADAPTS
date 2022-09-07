@@ -4,8 +4,14 @@
 \alias{estCellPercent.DCQ}
 \title{DCQ Deconvolution}
 \usage{
-estCellPercent.DCQ(refExpr, geneExpr, marker_set = NULL,
-  number_of_repeats = 10, alpha = 0.05, lambda = 0.2)
+estCellPercent.DCQ(
+  refExpr,
+  geneExpr,
+  marker_set = NULL,
+  number_of_repeats = 10,
+  alpha = 0.05,
+  lambda = 0.2
+)
 }
 \arguments{
 \item{refExpr}{a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.}

@@ -4,8 +4,7 @@
 \alias{estCellPercent.spillOver}
 \title{Estimate cell percentage from spillover}
 \usage{
-estCellPercent.spillOver(spillExpr, refExpr, geneExpr, method = "DCQ",
-  ...)
+estCellPercent.spillOver(spillExpr, refExpr, geneExpr, method = "DCQ", ...)
 }
 \arguments{
 \item{spillExpr}{A spill over matrix, as calculated by buildSpilloverMat(). (e.g. LM22.spillover.csv.gz)}

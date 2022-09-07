@@ -4,8 +4,7 @@
 \alias{estCellPercent.proportionsInAdmixture}
 \title{WGCNA::proportionsInAdmixture deconvolution}
 \usage{
-estCellPercent.proportionsInAdmixture(refExpr, geneExpr,
-  marker_set = NULL)
+estCellPercent.proportionsInAdmixture(refExpr, geneExpr, marker_set = NULL)
 }
 \arguments{
 \item{refExpr}{a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.}
@@ -24,10 +23,12 @@ Uses the 'WGCNA' package
 cellEst <- estCellPercent.proportionsInAdmixture(refExpr)
 }
 \examples{
+\donttest{
 #This toy example 
 library(ADAPTS)
 fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 smallLM22 <- fullLM22[1:25,] 
 
 cellEst <- estCellPercent.proportionsInAdmixture(refExpr=smallLM22, geneExpr=fullLM22)
+}
 }

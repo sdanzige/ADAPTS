@@ -4,9 +4,19 @@
 \alias{hierarchicalClassify}
 \title{Hierarchical Deconvolution}
 \usage{
-hierarchicalClassify(sigMatrix, geneExpr, toPred, hierarchData = NULL,
-  pdfDir = tempdir(), oneCore = FALSE, nPasses = 100,
-  remZinf = TRUE, method = "DCQ")
+hierarchicalClassify(
+  sigMatrix,
+  geneExpr,
+  toPred,
+  hierarchData = NULL,
+  pdfDir = tempdir(),
+  oneCore = FALSE,
+  nPasses = 100,
+  remZinf = TRUE,
+  method = "DCQ",
+  useRF = TRUE,
+  incNonCluster = TRUE
+)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
@@ -26,6 +36,10 @@ hierarchicalClassify(sigMatrix, geneExpr, toPred, hierarchData = NULL,
 \item{remZinf}{Set to TRUE to remove any ratio with zero or infinity when generating gList (DEFAULT: FALSE)}
 
 \item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture', 'nnls' (DEFAULT: DCQ)}
+
+\item{useRF}{Set to TRUE to use ranger random forests to build the seed matrix (DEFAULT: TRUE)}
+
+\item{incNonCluster}{Set to TRUE to include a 'nonCluster' in each of the sub matrices (DEFAULT: TRUE)}
 }
 \value{
 a matrix of cell counts

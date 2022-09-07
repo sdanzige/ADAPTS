@@ -4,9 +4,18 @@
 \alias{remakeLM22p}
 \title{Make an Augmented Signature Matrix}
 \usage{
-remakeLM22p(exprData, fullLM22, smallLM22 = NULL, plotToPDF = TRUE,
-  condTol = 1.01, postNorm = TRUE, autoDetectMin = FALSE,
-  pdfDir = tempdir(), oneCore = FALSE)
+remakeLM22p(
+  exprData,
+  fullLM22,
+  smallLM22 = NULL,
+  plotToPDF = TRUE,
+  condTol = 1.01,
+  postNorm = TRUE,
+  autoDetectMin = FALSE,
+  pdfDir = tempdir(),
+  oneCore = FALSE,
+  cache_gList = TRUE
+)
 }
 \arguments{
 \item{exprData}{The gene express data to use to augment LM22, e.g. ADAPTSdata::addMGSM27}
@@ -26,6 +35,8 @@ remakeLM22p(exprData, fullLM22, smallLM22 = NULL, plotToPDF = TRUE,
 \item{pdfDir}{A fold to write the pdf file to if plotToPDF=TRUE (DEFAULT: tempdir())}
 
 \item{oneCore}{Set to TRUE to disable parallelization (DEFAULT: FALSE)}
+
+\item{cache_gList}{Set to TRUE to cache slow gList calculations (DEFAULT: TRUE)}
 }
 \value{
 a cell type signature matrix
@@ -43,9 +54,9 @@ fullLM22 <- ADAPTS::LM22[1:200, 1:8]
 #Make a fake signature matrix out of 100 genes and the first 8 cell types
 smallLM22 <- fullLM22[1:100, 1:8] 
 
-#Make fake data representing two replicates of purified Mast.cells 
+#Make fake data representing two replicates of purified Mast.cells types 
 exprData <- ADAPTS::LM22[1:200, c("Mast.cells.resting","Mast.cells.activated")]
 colnames(exprData) <- c("Mast.cells", "Mast.cells")
 newSig <- remakeLM22p(exprData=exprData, fullLM22=fullLM22, smallLM22=smallLM22, 
-    plotToPDF=FALSE, oneCore=TRUE)
+    plotToPDF=FALSE, oneCore=TRUE, cache_gList=FALSE)
 }

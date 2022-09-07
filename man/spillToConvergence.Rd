@@ -4,8 +4,14 @@
 \alias{spillToConvergence}
 \title{Spillover to convergence}
 \usage{
-spillToConvergence(sigMatrix, geneExpr, nPasses = 100, plotIt = FALSE,
-  imputNAs = FALSE, method = "DCQ")
+spillToConvergence(
+  sigMatrix,
+  geneExpr,
+  nPasses = 100,
+  plotIt = FALSE,
+  imputNAs = FALSE,
+  method = "DCQ"
+)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}

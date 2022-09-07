@@ -4,10 +4,23 @@
 \alias{AugmentSigMatrix}
 \title{Make an augmented signature matrix}
 \usage{
-AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
-  plotToPDF = TRUE, imputeMissing = TRUE, condTol = 1.01,
-  postNorm = FALSE, minSumToRem = NA, addTitle = NULL,
-  autoDetectMin = FALSE, calcSpillOver = FALSE, pdfDir = tempdir())
+AugmentSigMatrix(
+  origMatrix,
+  fullData,
+  newData,
+  gList,
+  nGenes = 1:100,
+  plotToPDF = TRUE,
+  imputeMissing = TRUE,
+  condTol = 1.01,
+  postNorm = FALSE,
+  minSumToRem = NA,
+  addTitle = NULL,
+  autoDetectMin = FALSE,
+  calcSpillOver = FALSE,
+  pdfDir = tempdir(),
+  plotIt = TRUE
+)
 }
 \arguments{
 \item{origMatrix}{The original signature matrix}
@@ -37,6 +50,8 @@ AugmentSigMatrix(origMatrix, fullData, newData, gList, nGenes = 1:100,
 \item{calcSpillOver}{Use the training data to calculate a spillover matrix (DEFAULT: FALSE)}
 
 \item{pdfDir}{A fold to write the pdf file to if plotToPDF=TRUE (DEFAULT: tempdir())}
+
+\item{plotIt}{Set to FALSE to suppress non-PDF plotting (DEFAULT: TRUE)}
 }
 \value{
 an augmented cell type signature matrix

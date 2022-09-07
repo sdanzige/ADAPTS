@@ -28,10 +28,12 @@ Requires installation of package 'DeconRNASeq':
 cellEst <- estCellPercent.DeconRNASeq(refExpr,  geneExpr, marker_set=NULL)
 }
 \examples{
-#This toy example 
+\donttest{
+#This toy example, donttest due to performance issues in windows development build 
 library(ADAPTS)
 fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 smallLM22 <- fullLM22[1:25,] 
 
 cellEst <- estCellPercent.DeconRNASeq(refExpr=smallLM22, geneExpr=fullLM22)
+}
 }

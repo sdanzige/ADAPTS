@@ -4,8 +4,17 @@
 \alias{hierarchicalSplit}
 \title{Build hierarchical cell clusters.}
 \usage{
-hierarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100,
-  deconMatrices = NULL, remZinf = TRUE, method = "DCQ")
+hierarchicalSplit(
+  sigMatrix,
+  geneExpr,
+  oneCore = FALSE,
+  nPasses = 100,
+  deconMatrices = NULL,
+  remZinf = TRUE,
+  method = "DCQ",
+  useRF = TRUE,
+  incNonCluster = TRUE
+)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}
@@ -21,6 +30,10 @@ hierarchicalSplit(sigMatrix, geneExpr, oneCore = FALSE, nPasses = 100,
 \item{remZinf}{Set to TRUE to remove any ratio with zero or infinity when generating gList (DEFAULT: FALSE)}
 
 \item{method}{One of 'DCQ', 'SVMDECON', 'DeconRNASeq', 'proportionsInAdmixture', 'nnls' (DEFAULT: DCQ)}
+
+\item{useRF}{Set to TRUE to use ranger random forests to build the seed matrix (DEFAULT: TRUE)}
+
+\item{incNonCluster}{Set to TRUE to include a 'nonCluster' in each of the sub matrices (DEFAULT: TRUE)}
 }
 \value{
 A list of clusters and a list of signature matrices for breaking those clusters
@@ -38,5 +51,6 @@ library(ADAPTS)
 fullLM22 <- ADAPTS::LM22[1:30, 1:4]
 smallLM22 <- fullLM22[1:25,] 
 
-clusters <- hierarchicalSplit(sigMatrix=smallLM22, geneExpr=fullLM22, oneCore=TRUE, nPasses=10)
+clusters <- hierarchicalSplit(sigMatrix=smallLM22, geneExpr=fullLM22, oneCore=TRUE, nPasses=10,
+    deconMatrices=NULL, remZinf=TRUE, method='DCQ', useRF=TRUE, incNonCluster=TRUE)
 }

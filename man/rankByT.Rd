@@ -4,8 +4,14 @@
 \alias{rankByT}
 \title{Rank genes for each cell type}
 \usage{
-rankByT(geneExpr, qCut = 0.3, oneCore = FALSE, secondPval = TRUE,
-  remZinf = FALSE, reqRatGT1 = FALSE)
+rankByT(
+  geneExpr,
+  qCut = 0.3,
+  oneCore = FALSE,
+  secondPval = TRUE,
+  remZinf = FALSE,
+  reqRatGT1 = FALSE
+)
 }
 \arguments{
 \item{geneExpr}{The gene expression data}

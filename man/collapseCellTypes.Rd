@@ -2,7 +2,7 @@
 % Please edit documentation in R/onlyDeconAlgorithms.R
 \name{collapseCellTypes}
 \alias{collapseCellTypes}
-\title{Collapse cell yypes}
+\title{Collapse cell types}
 \usage{
 collapseCellTypes(cellCounts, method = "Pheno4")
 }

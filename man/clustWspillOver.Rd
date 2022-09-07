@@ -4,8 +4,13 @@
 \alias{clustWspillOver}
 \title{Cluster with spillover}
 \usage{
-clustWspillOver(sigMatrix, geneExpr, nPasses = 100,
-  deconMatrices = NULL, method = "DCQ")
+clustWspillOver(
+  sigMatrix,
+  geneExpr,
+  nPasses = 100,
+  deconMatrices = NULL,
+  method = "DCQ"
+)
 }
 \arguments{
 \item{sigMatrix}{The deconvolution matrix, e.g. LM22 or MGSM27}

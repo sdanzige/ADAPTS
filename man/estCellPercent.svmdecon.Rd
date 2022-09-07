@@ -4,8 +4,13 @@
 \alias{estCellPercent.svmdecon}
 \title{SVMDECON deconvolution}
 \usage{
-estCellPercent.svmdecon(refExpr, geneExpr, marker_set = NULL,
-  useOldVersion = F, progressBar = T)
+estCellPercent.svmdecon(
+  refExpr,
+  geneExpr,
+  marker_set = NULL,
+  useOldVersion = F,
+  progressBar = T
+)
 }
 \arguments{
 \item{refExpr}{a data frame representing immune cell expression profiles. Each row represents an expression of a gene, and each column represents a different immune cell type. colnames contains the name of each immune cell type and the rownames includes the genes' symbol. The names of each immune cell type and the symbol of each gene should be unique. Any gene with missing expression values must be excluded.}

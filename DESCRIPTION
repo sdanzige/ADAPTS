@@ -2,29 +2,24 @@ Package: ADAPTS
 Type: Package
 Title: Automated Deconvolution Augmentation of Profiles for Tissue
         Specific Cells
-Version: 0.9.26
+Version: 1.0.22
 Author: Samuel A Danziger
 Maintainer: Samuel A Danziger <sam.danziger@gmail.com>
-Copyright: Celgene Corporation
-Description: Augments existing or de-novo cell-type signature matrices to deconvolve bulk gene expression data.
-    Useful for building signature matrices from single cell RNAseq data, determine cell type deconvolution 
-    spillover, and hierarchical deconvolution to use spillover to increase deconvolution accuracy. Please cite: 
-    Danziger SA et al. (2019) ADAPTS: Automated Deconvolution Augmentation of Profiles for 
-    Tissue Specific cells <doi:10.1101/633958>. This package expands on the techniques outlined in Newman AM,
-    Liu CL, Green MR, Gentles AJ, Feng W, Xu Y, 
-    Hoang CD, Diehn M, Alizadeh, AA (2015) <doi:10.1038/nmeth.3337>'s Nature Methods paper: 
-    'Robust enumeration of cell subsets from tissue expression profiles'  to allow a user to easily add
-    their own cell types (e.g. a tumor specific cell type) to Newman's LM22 or other signature matrix. 
+Copyright: Bristol-Myers Squibb
+Description: Tools to construct (or add to) cell-type signature matrices using flow sorted or single cell samples and deconvolve bulk gene expression data.
+    Useful for assessing the quality of single cell RNAseq experiments, estimating the accuracy of signature matrices, and determining cell-type spillover. 
+    Please cite: Danziger SA et al. (2019) ADAPTS: Automated Deconvolution Augmentation of Profiles for Tissue Specific cells <doi:10.1371/journal.pone.0224693>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2
 Depends: R (>= 3.3.0)
 biocViews:
-Imports: missForest, e1071, WGCNA, ComICS, pheatmap, doParallel,
-        quantmod, preprocessCore, pcaMethods, foreach, DeconRNASeq,
-        nnls
-Suggests: R.rsp
+Imports: missForest, e1071, ComICS, pheatmap, doParallel, utils,
+        quantmod, preprocessCore, pcaMethods, foreach, nnls, ranger
+Suggests: R.rsp, DeconRNASeq, WGCNA
 VignetteBuilder: R.rsp
 NeedsCompilation: no
-Packaged: 2019-09-07 02:33:21 UTC; sdanziger
+Packaged: 2021-09-29 15:52:08 UTC; danziges
+Repository: CRAN
+Date/Publication: 2021-10-05 08:30:16 UTC
